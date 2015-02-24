@@ -12,5 +12,5 @@ void main()
     // outCol=gCol;
     // outCol = (texture(tex, gTexcoords)-texture(tex, gTexcoords))+gCol;
     outCol = texture(tex, gTexcoords);
-    outCol.w = 0.6;
+    //outCol.w = 0.6;
 }

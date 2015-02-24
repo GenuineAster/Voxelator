@@ -70,6 +70,9 @@ int main()
     glEnable(GL_DEPTH_TEST);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
+    // glEnable(GL_CULL_FACE);
+    // glCullFace(GL_BACK);
+    // glFrontFace(GL_CW);
 
 
     process_gl_errors();
@@ -207,13 +210,15 @@ int main()
     process_gl_errors();
 
     glm::vec3 camera_pos = glm::vec3(x, y, 0.0f);
-    GLint camera_pos_uni = glGetUniformLocation(program, "cameraPos");
-    glUniform3fv(camera_pos_uni, 1, glm::value_ptr(camera_pos));
+    glm::vec3 camera_target = glm::vec3(0.f, 0.f, 0.0f);
+    glm::vec3 camera_dir = glm::normalize(camera_target-camera_pos);
+    GLint camera_dir_uni = glGetUniformLocation(program, "cameraDir");
+    glUniform3fv(camera_dir_uni, 1, glm::value_ptr(camera_dir));
 
     wlog.log(L"Creating and getting view uniform data.\n");
     glm::mat4 view = glm::lookAt(
         camera_pos,
-        glm::vec3(0.0f, 0.0f, 0.0f),
+        camera_target,
         glm::vec3(0.0f, 1.0f, 0.0f)
     );
     GLint view_uni = glGetUniformLocation(program, "view");
