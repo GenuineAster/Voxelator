@@ -80,15 +80,15 @@ void main() {
     //   Second triangle
     gl_Position = endTrans * (gl_in[0].gl_Position + vec4(0.0, 0.0,-1.0, 0.0));
     // gCol = vec4(0.0, 0.5, 0.7, 1.0);
-    gTexcoords = baseTexcoords+vSpriteSizeNormalized[0]*vec2(1.0, 0.0);
+    gTexcoords = baseTexcoords+vSpriteSizeNormalized[0]*vec2(0.0, 1.0);
     EmitVertex();
     gl_Position = endTrans * (gl_in[0].gl_Position + vec4(1.0, 0.0,-1.0, 0.0));
     // gCol = vec4(0.7, 0.0, 0.5, 1.0);
     gTexcoords = baseTexcoords+vSpriteSizeNormalized[0]*vec2(1.0, 1.0);
     EmitVertex();
     EndPrimitive();
-    // Draw fourth face
-    //   First triangle
+    // // Draw fourth face
+    // //   First triangle
     gl_Position = endTrans * (gl_in[0].gl_Position + vec4(1.0, 1.0,-1.0, 0.0));
     // gCol = vec4(0.0, 0.5, 0.7, 1.0);
     gTexcoords = baseTexcoords+vSpriteSizeNormalized[0]*vec2(1.0, 1.0);

@@ -169,7 +169,7 @@ int main()
 
     process_gl_errors();
 
-    constexpr int x=8,y=8,z=8,tx=4,ty=4,total=x*y*z;
+    constexpr int x=64,y=64,z=64,tx=4,ty=4,total=x*y*z;
     wlog.log(L"Creating ");
     wlog.log(std::to_wstring(total), false);
     wlog.log(L" blocks.\n", false);
@@ -217,7 +217,7 @@ int main()
 
 
     wlog.log(L"Creating and getting projection uniform data.\n");
-    glm::mat4 projection = glm::perspective(pi/4.f, 600.0f / 480.0f, 0.01f, 1000.0f);
+    glm::mat4 projection = glm::perspective(pi/3.f, 600.0f / 480.0f, 0.01f, 1000.0f);
     GLint projection_uni = glGetUniformLocation(program, "projection");
     glUniformMatrix4fv(projection_uni, 1, GL_FALSE, glm::value_ptr(projection));
 

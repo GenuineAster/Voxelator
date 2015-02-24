@@ -1,4 +1,4 @@
-#version 150
+#version 400
 
 in vec3 pos;
 in vec2 texid;
