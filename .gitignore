@@ -1,0 +1,8 @@
+*.so
+*.dll
+*.a
+*.o
+*.lib
+*.cbp
+build/
+
