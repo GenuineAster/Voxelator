@@ -68,7 +68,9 @@ int main()
     process_gl_errors();
 
     glEnable(GL_DEPTH_TEST);
-    //glEnable(GL_CULL_FACE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+
 
     process_gl_errors();
     wlog.log("Generating Vertex Array Object.\n");
@@ -157,10 +159,10 @@ int main()
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, col);
     int spritesheet_x, spritesheet_y, spritesheet_n;
     unsigned char *spritesheet_data = stbi_load(
-        "assets/images/spritesheet.png", &spritesheet_x, &spritesheet_y, &spritesheet_n, 0
+        "assets/images/spritesheet.png", &spritesheet_x, &spritesheet_y, &spritesheet_n, 4
     );
     wlog.log(L"Image size: {" + std::to_wstring(spritesheet_x) + L", " + std::to_wstring(spritesheet_y) + L"}, " + std::to_wstring(spritesheet_n) + L"cpp\n");
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, spritesheet_x, spritesheet_y, 0, GL_RGB, GL_UNSIGNED_BYTE, spritesheet_data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, spritesheet_x, spritesheet_y, 0, GL_RGBA, GL_UNSIGNED_BYTE, spritesheet_data);
     glGenerateMipmap(GL_TEXTURE_2D);
     stbi_image_free(spritesheet_data);
     glm::vec2 spritesheet_size(spritesheet_x, spritesheet_y);
@@ -169,7 +171,7 @@ int main()
 
     process_gl_errors();
 
-    constexpr int x=64,y=64,z=64,tx=4,ty=4,total=x*y*z;
+    constexpr int x=8,y=8,z=8,tx=4,ty=4,total=x*y*z;
     wlog.log(L"Creating ");
     wlog.log(std::to_wstring(total), false);
     wlog.log(L" blocks.\n", false);
@@ -197,16 +199,20 @@ int main()
 
     wlog.log(L"Creating and getting transform uniform data.\n");
     glm::mat4 transform;
-    transform = glm::translate(transform, glm::vec3(-x/2.f, -y/2.f, -z/2.f));
+    transform = glm::translate(transform, glm::vec3(-x, -y, -z));
     transform = glm::rotate(transform, pi/4.f, glm::vec3(0.0f, 0.0f, 1.0f));
     GLint transform_uni = glGetUniformLocation(program, "transform");
     glUniformMatrix4fv(transform_uni, 1, GL_FALSE, glm::value_ptr(transform));
 
     process_gl_errors();
 
+    glm::vec3 camera_pos = glm::vec3(x, y, 0.0f);
+    GLint camera_pos_uni = glGetUniformLocation(program, "cameraPos");
+    glUniform3fv(camera_pos_uni, 1, glm::value_ptr(camera_pos));
+
     wlog.log(L"Creating and getting view uniform data.\n");
     glm::mat4 view = glm::lookAt(
-        glm::vec3(x, y, 0.0f),
+        camera_pos,
         glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f)
     );
