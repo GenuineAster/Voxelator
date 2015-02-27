@@ -17,19 +17,18 @@
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
-using coord_type = int;
+using coord_type = uint8_t;
 
 struct block{
     coord_type x, y, z;
-    int texid_x, texid_y;
-    block(int x=0, int y=0, int z=0, int tx=0, int ty=0):x(x),y(y),z(z),texid_x(tx),texid_y(ty){}
+    block(int x=0, int y=0, int z=0):x(x),y(y),z(z){}
 };
 
 constexpr int block_offset_x = 0;
 constexpr int block_offset_y = block_offset_x + sizeof(coord_type);
 constexpr int block_offset_z = block_offset_y + sizeof(coord_type);
-constexpr int block_offset_texid_x = block_offset_z + sizeof(coord_type);
-constexpr int block_offset_texid_y = block_offset_texid_x + sizeof(int);
+
+using block_id = uint8_t;
 
 constexpr float pi = 3.14159;
 
@@ -69,18 +68,18 @@ int main()
     glEnable(GL_DEPTH_TEST);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
-    // glEnable(GL_CULL_FACE);
-    // glCullFace(GL_BACK);
-    // glFrontFace(GL_CW);
-
 
     process_gl_errors();
+
     wlog.log("Generating Vertex Array Object.\n");
     GLuint vao;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
+    process_gl_errors();
+
     wlog.log(L"Creating Shaders.\n");
+    
     wlog.log(L"Creating vertex shader.\n");
     std::string shader_vert_source;
     if(!readfile("assets/shaders/shader.vert", shader_vert_source)) {
@@ -101,6 +100,8 @@ int main()
     else if(status != GL_TRUE) {
         return cleanup(-5, std::wstring(buff[0], buff[511]));
     }
+    process_gl_errors();
+
     wlog.log(L"Creating fragment shader.\n");
     std::string shader_frag_source;
     if(!readfile("assets/shaders/shader.frag", shader_frag_source)) {
@@ -120,7 +121,9 @@ int main()
     else if(status != GL_TRUE) {
         return cleanup(-5, std::wstring(buff[0], buff[511]));
     }
+
     process_gl_errors();
+
     wlog.log(L"Creating geometry shader.\n");
     std::string shader_geom_source;
     if(!readfile("assets/shaders/shader.geom", shader_geom_source)) {
@@ -142,6 +145,7 @@ int main()
         return cleanup(-5, std::wstring(buff[0], buff[511]));
     }
     process_gl_errors();
+
     wlog.log(L"Creating and linking shader program.\n");
     GLuint program = glCreateProgram();
     glAttachShader(program, shader_vert);
@@ -151,45 +155,48 @@ int main()
     glLinkProgram(program);
     glUseProgram(program);
 
-    wlog.log(L"Loading texture.\n");
+    process_gl_errors();
+
+    wlog.log(L"Loading spritesheet.\n");
+    glActiveTexture(GL_TEXTURE0);
     GLuint spritesheet_tex;
     glGenTextures(1, &spritesheet_tex);
     glBindTexture(GL_TEXTURE_2D, spritesheet_tex);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    float col[] = { 1.0f, 0.0f, 0.0f, 1.0f };
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+    float col[] = { 0.0f, 1.0f, 0.0f, 1.0f };
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, col);
     int spritesheet_x, spritesheet_y, spritesheet_n;
     unsigned char *spritesheet_data = stbi_load(
         "assets/images/spritesheet.png", &spritesheet_x, &spritesheet_y, &spritesheet_n, 4
     );
-    wlog.log(L"Image size: {" + std::to_wstring(spritesheet_x) + L", " + std::to_wstring(spritesheet_y) + L"}, " + std::to_wstring(spritesheet_n) + L"cpp\n");
+    wlog.log(L"Spritesheet size: {" + std::to_wstring(spritesheet_x) + L", " + std::to_wstring(spritesheet_y) + L"}, " + std::to_wstring(spritesheet_n) + L"cpp\n");
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, spritesheet_x, spritesheet_y, 0, GL_RGBA, GL_UNSIGNED_BYTE, spritesheet_data);
     glGenerateMipmap(GL_TEXTURE_2D);
     stbi_image_free(spritesheet_data);
     glm::vec2 spritesheet_size(spritesheet_x, spritesheet_y);
     glm::vec2 sprite_size(16, 16);
     glm::vec2 sprite_size_normalized = sprite_size/spritesheet_size;
+    glm::ivec2 n_sprites = spritesheet_size/sprite_size;
 
     process_gl_errors();
 
-    constexpr int x=64,y=64,z=64,tx=4,ty=4,total=x*y*z;
+    constexpr int x=8,y=8,z=8,total=x*y*z;
+    const int tx=n_sprites.x,ty=n_sprites.y;
     wlog.log(L"Creating ");
     wlog.log(std::to_wstring(total), false);
     wlog.log(L" blocks.\n", false);
-    std::array<block, total> *blocks = new std::array<block, total>;
-    std::generate(blocks->begin(), blocks->end(), [_x=x,_y=y,_tx=tx,_ty=ty]{
-        static int x=0,y=0,z=0,tx=0,ty=0;
+    std::array<block,    total> *blocks    = new std::array<block,    total>;
+    std::generate(blocks->begin(), blocks->end(), [_x=x,_y=y]{
+        static uint8_t x,y,z=y=x=0;
         static bool first=true;
         if(!first){
             if(x>=_x-1){x=0;++y;}
             else ++x;
             if(y>=_y){y=0;++z;}
-            if(tx<_tx)++tx;
-            else {tx=0;++ty;}
-            if(!(ty<_ty))ty=0;
         } else first=false;
-        return block{x,y,z,tx,ty};
+        return block{x,y,z};
     });
 
     wlog.log(L"Generating Vertex Buffer Object.\n");
@@ -197,6 +204,30 @@ int main()
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(*blocks), blocks->data(), GL_STATIC_DRAW);
+    process_gl_errors();
+
+    wlog.log(L"Creating Chunk Info Texture.\n");
+    std::array<block_id, total> *block_ids = new std::array<block_id, total>;
+    std::generate(block_ids->begin(), block_ids->end(), [_tx=tx,_ty=ty]{
+    	static uint8_t t=0;
+    	t+=2;
+    	if(t==_tx*_ty)
+    		t=0;
+    	else if(t>_tx*_ty)
+    		t=1;
+        // wlog.log(L"Generating " + std::to_wstring(t) + L"\n");
+        return t;
+    });
+    glActiveTexture(GL_TEXTURE1);
+    GLuint chunk_info_tex;
+    glGenTextures(1, &chunk_info_tex);
+    glBindTexture(GL_TEXTURE_3D, chunk_info_tex);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, 0);
+    glTexParameterfv(GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, col);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_RED, x, y, z, 0, GL_RED, GL_UNSIGNED_BYTE, block_ids->data());
+    glGenerateMipmap(GL_TEXTURE_3D);
     process_gl_errors();
 
     wlog.log(L"Creating and getting transform uniform data.\n");
@@ -208,11 +239,14 @@ int main()
 
     process_gl_errors();
 
+
+    wlog.log(L"Creating and getting camera direction uniform data.\n");
     glm::vec3 camera_pos = glm::vec3(x, y, 0.0f);
     glm::vec3 camera_target = glm::vec3(0.f, 0.f, 0.0f);
     glm::vec3 camera_dir = glm::normalize(camera_target-camera_pos);
     GLint camera_dir_uni = glGetUniformLocation(program, "cameraDir");
     glUniform3fv(camera_dir_uni, 1, glm::value_ptr(camera_pos));
+    process_gl_errors();
 
     wlog.log(L"Creating and getting view uniform data.\n");
     glm::mat4 view = glm::lookAt(
@@ -227,7 +261,7 @@ int main()
 
 
     wlog.log(L"Creating and getting projection uniform data.\n");
-    glm::mat4 projection = glm::perspective(pi/3.f, 600.0f / 480.0f, 0.01f, 1000.0f);
+    glm::mat4 projection = glm::perspective(pi/3.f, 640.0f / 480.0f, 0.01f, 1000.0f);
     GLint projection_uni = glGetUniformLocation(program, "projection");
     glUniformMatrix4fv(projection_uni, 1, GL_FALSE, glm::value_ptr(projection));
 
@@ -237,19 +271,30 @@ int main()
     GLint sprite_size_uni = glGetUniformLocation(program, "spriteSizeNormalized");
     glUniform2fv(sprite_size_uni, 1, glm::value_ptr(sprite_size_normalized));
 
+	process_gl_errors();
+
+    wlog.log(L"Creating and setting spritesheet texture uniform data.\n");
+    GLint spritesheet_uni = glGetUniformLocation(program, "spritesheet");
+    glUniform1i(spritesheet_uni, 0);
+
+    process_gl_errors();
+
+    wlog.log(L"Creating and setting block chunk texture uniform data.\n");
+    GLint chunk_id_uni = glGetUniformLocation(program, "IDTex");
+    glUniform1i(chunk_id_uni, 1);
+
+    process_gl_errors();
+
+    wlog.log(L"Creating and setting block chunk size uniform data.\n");
+    GLint chunk_size_uni = glGetUniformLocation(program, "chunkSize");
+    glUniform3fv(chunk_size_uni, 1, glm::value_ptr(glm::vec3(x,y,z)));
+
     process_gl_errors();
 
     wlog.log(L"Setting position vertex attribute data.\n");
     GLint pos_attrib = glGetAttribLocation(program, "pos");
     glEnableVertexAttribArray(pos_attrib);
-    glVertexAttribPointer(pos_attrib, 3, GL_INT, GL_FALSE, 20, 0);
-
-    process_gl_errors();
-
-    wlog.log(L"Setting texture vertex attribute data.\n");
-    GLint texid_attrib = glGetAttribLocation(program, "texid");
-    glEnableVertexAttribArray(texid_attrib);
-    glVertexAttribPointer(texid_attrib, 2, GL_INT, GL_FALSE, 0, BUFFER_OFFSET(block_offset_texid_x));
+    glVertexAttribPointer(pos_attrib, 3, GL_UNSIGNED_BYTE, GL_FALSE, 3, 0);
 
     process_gl_errors();
 
@@ -259,6 +304,8 @@ int main()
 
     long long cnt=0;
     float ft_total=0.f, fps_total=0.f;
+
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
     while(!glfwWindowShouldClose(win)) {
         end = std::chrono::high_resolution_clock::now();
@@ -276,14 +323,13 @@ int main()
             ft_total=fps_total=0.f;
         }
         start=end;
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        //transform = glm::rotate(transform, ft/3e6f, glm::vec3(0.5f, 0.5f, 0.5f));
+        transform = glm::rotate(transform, ft/3e6f, glm::vec3(0.5f, 0.5f, 0.5f));
         glUniformMatrix4fv(transform_uni, 1, GL_FALSE, glm::value_ptr(transform));
         glDrawArrays(GL_POINTS, 0, total);
         glfwSwapBuffers(win);
         glfwPollEvents();
-        //process_gl_errors();
+        process_gl_errors();
         // std::this_thread::sleep_for(16ms);
     }
 

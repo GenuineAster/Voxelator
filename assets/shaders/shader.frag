@@ -1,11 +1,11 @@
 #version 430
 
-in vec2 gTexcoords;
 out vec4 outCol;
+in vec2 gTexcoords;
 
-uniform sampler2D tex;
+uniform sampler2D spritesheet;
 
 void main()
 {
-	outCol = texture(tex, gTexcoords);
+	outCol = texture(spritesheet, gTexcoords);
 }
