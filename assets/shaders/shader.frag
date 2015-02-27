@@ -1,6 +1,5 @@
-#version 400
+#version 430
 
-// in vec4 gCol;
 in vec2 gTexcoords;
 out vec4 outCol;
 
@@ -8,9 +7,5 @@ uniform sampler2D tex;
 
 void main()
 {
-    //outCol = vec4(1.0, 0.0, 0.0, 1.0);
-    // outCol=gCol;
-    // outCol = (texture(tex, gTexcoords)-texture(tex, gTexcoords))+gCol;
-    outCol = texture(tex, gTexcoords);
-    //outCol.w = 0.6;
+	outCol = texture(tex, gTexcoords);
 }

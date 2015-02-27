@@ -13,7 +13,6 @@
 #include <chrono>
 #include <algorithm>
 #include <array>
-#define STB_IMAGE_IMPLEMENTATION
 #include "ext/stb/stb_image.h"
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
@@ -49,7 +48,7 @@ int main()
         return cleanup(-1);
     wlog.log(L"Creating window.\n");
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -174,7 +173,7 @@ int main()
 
     process_gl_errors();
 
-    constexpr int x=8,y=8,z=8,tx=4,ty=4,total=x*y*z;
+    constexpr int x=64,y=64,z=64,tx=4,ty=4,total=x*y*z;
     wlog.log(L"Creating ");
     wlog.log(std::to_wstring(total), false);
     wlog.log(L" blocks.\n", false);
@@ -213,13 +212,13 @@ int main()
     glm::vec3 camera_target = glm::vec3(0.f, 0.f, 0.0f);
     glm::vec3 camera_dir = glm::normalize(camera_target-camera_pos);
     GLint camera_dir_uni = glGetUniformLocation(program, "cameraDir");
-    glUniform3fv(camera_dir_uni, 1, glm::value_ptr(camera_dir));
+    glUniform3fv(camera_dir_uni, 1, glm::value_ptr(camera_pos));
 
     wlog.log(L"Creating and getting view uniform data.\n");
     glm::mat4 view = glm::lookAt(
         camera_pos,
         camera_target,
-        glm::vec3(0.0f, 1.0f, 0.0f)
+        glm::vec3(-1.0f, 0.0f, 0.0f)
     );
     GLint view_uni = glGetUniformLocation(program, "view");
     glUniformMatrix4fv(view_uni, 1, GL_FALSE, glm::value_ptr(view));
@@ -279,12 +278,12 @@ int main()
         start=end;
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        transform = glm::rotate(transform, ft/3e6f, glm::vec3(0.5f, 0.5f, 0.5f));
+        //transform = glm::rotate(transform, ft/3e6f, glm::vec3(0.5f, 0.5f, 0.5f));
         glUniformMatrix4fv(transform_uni, 1, GL_FALSE, glm::value_ptr(transform));
         glDrawArrays(GL_POINTS, 0, total);
         glfwSwapBuffers(win);
         glfwPollEvents();
-        process_gl_errors();
+        //process_gl_errors();
         // std::this_thread::sleep_for(16ms);
     }
 
