@@ -182,7 +182,7 @@ int main()
 
     process_gl_errors();
 
-    constexpr int x=8,y=8,z=8,total=x*y*z;
+    constexpr int x=64,y=64,z=64,total=x*y*z;
     const int tx=n_sprites.x,ty=n_sprites.y;
     wlog.log(L"Creating ");
     wlog.log(std::to_wstring(total), false);
@@ -303,7 +303,7 @@ int main()
     glFlush();
 
     long long cnt=0;
-    float ft_total=0.f, fps_total=0.f;
+    float ft_total=0.f;
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -311,16 +311,14 @@ int main()
         end = std::chrono::high_resolution_clock::now();
         long int ft = (std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
         ft_total += ft;
-        fps_total += 1e6f/ft;
         ++cnt;
         if(std::chrono::duration_cast<std::chrono::seconds>(end-timetoprint).count() >= 1) {
             timetoprint = std::chrono::high_resolution_clock::now();
             float ft_avg = ft_total/cnt;
-            float fps_avg = fps_total/cnt;
-            std::wstring frametimestr = L"FPS avg: "+std::to_wstring(fps_avg) + L"\t" L"Frametime avg: "+std::to_wstring(ft_avg)+L"µs\n";
+            std::wstring frametimestr = L"FPS avg: "+std::to_wstring(1e6f/ft_avg) + L"\t" L"Frametime avg: "+std::to_wstring(ft_avg)+L"µs\n";
             wlog.log(frametimestr);
             cnt=0;
-            ft_total=fps_total=0.f;
+            ft_total=0.f;
         }
         start=end;
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
