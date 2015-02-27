@@ -1,7 +1,7 @@
 CXXFLAGS = -std=c++14 -Wall -Wextra -I src/ -g
 LDFLAGS  = -lglfw -lGLEW -lGL
 
-voxelator: src/main.o
+voxelator: src/main.o src/ext/stb/stb_image_pre.o
 	$(CXX) $^ $(CXXFLAGS) $(LDFLAGS) -o $@
 
 all: voxelator
