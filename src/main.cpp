@@ -65,6 +65,8 @@ int main()
 
     process_gl_errors();
 
+    wlog.log(L"Any errors produced directly after GLEW initialization should be ignorable.\n");
+
     glEnable(GL_DEPTH_TEST);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
@@ -115,8 +117,8 @@ int main()
     glGetShaderInfoLog(shader_frag, 512, NULL, buff);
     if(buff[0] && status == GL_TRUE) {
         wlog.log(L"Fragment shader log:\n");
-        wlog.log(buff);
-        wlog.log(L"\n");
+        wlog.log(buff, false);
+        wlog.log(L"\n", false);
     }
     else if(status != GL_TRUE) {
         return cleanup(-5, std::wstring(buff[0], buff[511]));
@@ -137,8 +139,8 @@ int main()
     glGetShaderInfoLog(shader_geom, 512, NULL, buff);
     if(buff[0] && status == GL_TRUE) {
         wlog.log(L"Geometry shader log:\n");
-        wlog.log(buff);
-        wlog.log(L"\n");
+        wlog.log(buff, false);
+        wlog.log(L"\n", false);
     }
     else if(status != GL_TRUE) {
         wlog.log(buff);
@@ -177,8 +179,11 @@ int main()
     stbi_image_free(spritesheet_data);
     glm::vec2 spritesheet_size(spritesheet_x, spritesheet_y);
     glm::vec2 sprite_size(16, 16);
+    wlog.log(L"Sprite size: {"+ std::to_wstring(sprite_size.x) + L"," + std::to_wstring(sprite_size.y) +L"}\n");
     glm::vec2 sprite_size_normalized = sprite_size/spritesheet_size;
+    wlog.log(L"Sprite size (normalized): {"+ std::to_wstring(sprite_size_normalized.x) + L"," + std::to_wstring(sprite_size_normalized.y) +L"}\n");
     glm::ivec2 n_sprites = spritesheet_size/sprite_size;
+    wlog.log(L"Number of sprites: {"+ std::to_wstring(n_sprites.x) + L"," + std::to_wstring(n_sprites.y) +L"}\n");
 
     process_gl_errors();
 
@@ -303,9 +308,11 @@ int main()
     glFlush();
 
     long long cnt=0;
-    float ft_total=0.f;
+    long double ft_total=0.f;
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+    wlog.log(L"Starting main loop.\n");
 
     while(!glfwWindowShouldClose(win)) {
         end = std::chrono::high_resolution_clock::now();
@@ -315,10 +322,10 @@ int main()
         if(std::chrono::duration_cast<std::chrono::seconds>(end-timetoprint).count() >= 1) {
             timetoprint = std::chrono::high_resolution_clock::now();
             float ft_avg = ft_total/cnt;
-            std::wstring frametimestr = L"FPS avg: "+std::to_wstring(1e6f/ft_avg) + L"\t" L"Frametime avg: "+std::to_wstring(ft_avg)+L"µs\n";
+            std::wstring frametimestr = L"FPS avg: "+std::to_wstring(1e6L/ft_avg) + L"\t" L"Frametime avg: "+std::to_wstring(ft_avg)+L"µs\n";
             wlog.log(frametimestr);
             cnt=0;
-            ft_total=0.f;
+            ft_total=0.L;
         }
         start=end;
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
