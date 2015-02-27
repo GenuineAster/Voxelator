@@ -1,5 +1,5 @@
-#pragma once
-
+#ifndef LOGGER_IMPL
+#define LOGGER_IMPL
 #include <Logger/Logger.hpp>
 #include <iomanip>
 
@@ -34,3 +34,4 @@ Logger<CharT>::Logger(StreamType &stream):
 	m_enable_log{true},
 	m_time_start{std::chrono::high_resolution_clock::now()}
 {;}
+#endif

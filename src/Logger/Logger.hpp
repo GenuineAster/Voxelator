@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LOGGER_HEADER
+#define LOGGER_HEADER
 #include <chrono>
 #include <ostream>
 
@@ -25,3 +26,4 @@ public:
 };
 
 #include <Logger/Logger.inl>
+#endif
