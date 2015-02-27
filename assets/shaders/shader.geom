@@ -19,8 +19,13 @@ int getID(ivec3 pos) {
 
 void main() {
 	vec4 pos = gl_in[0].gl_Position;
+	ivec3 pos_index = ivec3(pos);
 
-	int ID = getID(ivec3(pos));
+	int ID = getID(pos_index);
+
+	if(ID==0)
+		return;
+
 	int numSprites = int(1.f/spriteSizeNormalized.x);
 	ivec2 TexID=ivec2(int(ID)%4, int(ID)/4);
 
@@ -35,141 +40,153 @@ void main() {
 	float check;
 
 	// Draw first face
-	normal = normalize(vec3(preEndTrans*vec4(0.0, 0.0, -1.0, 0.0)));
-	check  = dot(cam2tri, normal);
-	if(check < 0) {
-		//   First triangle
-		gl_Position = endTrans * (pos);
-		gTexcoords = baseTexcoords;
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(1.0, 0.0, 0.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(0.0, 1.0, 0.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-		EmitVertex();
-		//   Second triangle
-		gl_Position = endTrans * (pos + vec4(1.0, 0.0, 0.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(1.0, 1.0, 0.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
-		EmitVertex();
-		EndPrimitive();
+	if(pos_index.z <= 0 || getID(pos_index+ivec3(0, 0, -1)) == 0) {
+		normal = normalize(vec3(preEndTrans*vec4(0.0, 0.0, -1.0, 0.0)));
+		check  = dot(cam2tri, normal);
+		if(check <= 0) {
+			//   First triangle
+			gl_Position = endTrans * (pos);
+			gTexcoords = baseTexcoords;
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(1.0, 0.0, 0.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(0.0, 1.0, 0.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+			EmitVertex();
+			//   Second triangle
+			gl_Position = endTrans * (pos + vec4(1.0, 0.0, 0.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(1.0, 1.0, 0.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
+			EmitVertex();
+			EndPrimitive();
+		}
 	}
 	// Draw second face
-	normal = normalize(vec3(preEndTrans*vec4(-1.0, 0.0, 0.0, 0.0)));
-	check  = dot(cam2tri, normal);
-	if(check < 0) {
-		//   First triangle
-		gl_Position = endTrans * (pos);
-		gTexcoords = baseTexcoords;
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(0.0, 1.0, 0.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(0.0, 0.0, 1.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
-		EmitVertex();
-		//   Second triangle
-		gl_Position = endTrans * (pos + vec4(0.0, 1.0, 0.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(0.0, 1.0, 1.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
-		EmitVertex();
-		EndPrimitive();
+	if(pos_index.x <= 0 || getID(pos_index+ivec3(-1, 0, 0)) == 0) {
+		normal = normalize(vec3(preEndTrans*vec4(-1.0, 0.0, 0.0, 0.0)));
+		check  = dot(cam2tri, normal);
+		if(check <= 0) {
+			//   First triangle
+			gl_Position = endTrans * (pos);
+			gTexcoords = baseTexcoords;
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(0.0, 1.0, 0.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(0.0, 0.0, 1.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
+			EmitVertex();
+			//   Second triangle
+			gl_Position = endTrans * (pos + vec4(0.0, 1.0, 0.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(0.0, 1.0, 1.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
+			EmitVertex();
+			EndPrimitive();
+		}
 	}
 	// Draw third face
-	normal = normalize(vec3(preEndTrans*vec4(0.0, -1.0, 0.0, 0.0)));
-	check  = dot(cam2tri, normal);
-	if(check < 0) {
-		//   First triangle
-		gl_Position = endTrans * (pos);
-		gTexcoords = baseTexcoords;
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(0.0, 0.0, 1.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(1.0, 0.0, 0.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
-		EmitVertex();
-		//   Second triangle
-		gl_Position = endTrans * (pos + vec4(0.0, 0.0, 1.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(1.0, 0.0, 1.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
-		EmitVertex();
-		EndPrimitive();
+	if(pos_index.y <= 0 || getID(pos_index+ivec3(0, -1, 0)) == 0) {
+		normal = normalize(vec3(preEndTrans*vec4(0.0, -1.0, 0.0, 0.0)));
+		check  = dot(cam2tri, normal);
+		if(check <= 0) {
+			//   First triangle
+			gl_Position = endTrans * (pos);
+			gTexcoords = baseTexcoords;
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(0.0, 0.0, 1.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(1.0, 0.0, 0.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
+			EmitVertex();
+			//   Second triangle
+			gl_Position = endTrans * (pos + vec4(0.0, 0.0, 1.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(1.0, 0.0, 1.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
+			EmitVertex();
+			EndPrimitive();
+		}
 	}
 	// Draw fourth face
-	normal = normalize(vec3(preEndTrans*vec4(1.0, 0.0, 0.0, 0.0)));
-	check  = dot(cam2tri, normal);
-	if(check < 0) {
-		// //   First triangle
-		gl_Position = endTrans * (pos + vec4(1.0, 1.0, 1.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(1.0, 1.0, 0.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(1.0, 0.0, 1.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
-		EmitVertex();
-		//   Second triangle
-		gl_Position = endTrans * (pos + vec4(1.0, 1.0, 0.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(1.0, 0.0, 0.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 0.0);
-		EmitVertex();
-		EndPrimitive();
+	if(pos_index.x >= chunkSize.x-1 || getID(pos_index+ivec3(1, 0, 0)) == 0) {
+		normal = normalize(vec3(preEndTrans*vec4(1.0, 0.0, 0.0, 0.0)));
+		check  = dot(cam2tri, normal);
+		if(check <= 0) {
+			// //   First triangle
+			gl_Position = endTrans * (pos + vec4(1.0, 1.0, 1.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(1.0, 1.0, 0.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(1.0, 0.0, 1.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
+			EmitVertex();
+			//   Second triangle
+			gl_Position = endTrans * (pos + vec4(1.0, 1.0, 0.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(1.0, 0.0, 0.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 0.0);
+			EmitVertex();
+			EndPrimitive();
+		}
 	}
 	// Draw fifth face
-	normal = normalize(vec3(preEndTrans*vec4(0.0, 1.0, 0.0, 0.0)));
-	check  = dot(cam2tri, normal);
-	if(check < 0) {
-		//   First triangle
-		gl_Position = endTrans * (pos + vec4(1.0, 1.0, 1.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(0.0, 1.0, 1.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(1.0, 1.0, 0.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
-		EmitVertex();
-		//   Second triangle
-		gl_Position = endTrans * (pos + vec4(0.0, 1.0, 1.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(0.0, 1.0, 0.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 0.0);
-		EmitVertex();
-		EndPrimitive();
+	if(pos_index.y >= chunkSize.y-1 || getID(pos_index+ivec3(0, 1, 0)) == 0) {
+		normal = normalize(vec3(preEndTrans*vec4(0.0, 1.0, 0.0, 0.0)));
+		check  = dot(cam2tri, normal);
+		if(check <= 0) {
+			//   First triangle
+			gl_Position = endTrans * (pos + vec4(1.0, 1.0, 1.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(0.0, 1.0, 1.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(1.0, 1.0, 0.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
+			EmitVertex();
+			//   Second triangle
+			gl_Position = endTrans * (pos + vec4(0.0, 1.0, 1.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(0.0, 1.0, 0.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 0.0);
+			EmitVertex();
+			EndPrimitive();
+		}
 	}
 	// Draw sixth face
-	normal = normalize(vec3(preEndTrans*vec4(0.0, 0.0, 1.0, 0.0)));
-	check  = dot(cam2tri, normal);
-	if(check < 0) {
-		//   First triangle
-		gl_Position = endTrans * (pos + vec4(1.0, 1.0, 1.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(1.0, 0.0, 1.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(0.0, 1.0, 1.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
-		EmitVertex();
-		//   Second triangle
-		gl_Position = endTrans * (pos + vec4(1.0, 0.0, 1.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-		EmitVertex();
-		gl_Position = endTrans * (pos + vec4(0.0, 0.0, 1.0, 0.0));
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 0.0);
-		EmitVertex();
-		EndPrimitive();
+	if(pos_index.z >= chunkSize.z-1 || getID(pos_index+ivec3(0, 0, 1)) == 0) {
+		normal = normalize(vec3(preEndTrans*vec4(0.0, 0.0, 1.0, 0.0)));
+		check  = dot(cam2tri, normal);
+		if(check <= 0) {
+			//   First triangle
+			gl_Position = endTrans * (pos + vec4(1.0, 1.0, 1.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(1.0, 0.0, 1.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(0.0, 1.0, 1.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
+			EmitVertex();
+			//   Second triangle
+			gl_Position = endTrans * (pos + vec4(1.0, 0.0, 1.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+			EmitVertex();
+			gl_Position = endTrans * (pos + vec4(0.0, 0.0, 1.0, 0.0));
+			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 0.0);
+			EmitVertex();
+			EndPrimitive();
+		}
 	}
 }
