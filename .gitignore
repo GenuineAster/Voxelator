@@ -6,3 +6,4 @@
 *.cbp
 build/
 voxelator
+*.trace
