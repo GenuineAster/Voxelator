@@ -13,6 +13,7 @@
 #include <chrono>
 #include <algorithm>
 #include <array>
+#include <ctime>
 #include "ext/stb/stb_image.h"
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
@@ -40,11 +41,13 @@ bool process_gl_errors();
 
 int main()
 {
+	std::srand(std::time(NULL));
 	using namespace std::literals::chrono_literals;
 	wlog.log(L"Starting up.\n");
 	wlog.log(L"Initializing GLFW.\n");
 	if(!glfwInit())
 		return cleanup(-1);
+	glfwSetErrorCallback([](int a, const char* b){wlog.log(std::wstring{b, b+std::strlen(b)}+L"\n");});
 	wlog.log(L"Creating window.\n");
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -166,12 +169,12 @@ int main()
 	glBindTexture(GL_TEXTURE_2D, spritesheet_tex);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 4);
 	float col[] = { 0.0f, 1.0f, 0.0f, 1.0f };
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, col);
 	int spritesheet_x, spritesheet_y, spritesheet_n;
 	unsigned char *spritesheet_data = stbi_load(
-		"assets/images/spritesheet.png", &spritesheet_x, &spritesheet_y, &spritesheet_n, 4
+		"assets/images/spritesheet2.png", &spritesheet_x, &spritesheet_y, &spritesheet_n, 4
 	);
 	wlog.log(L"Spritesheet size: {" + std::to_wstring(spritesheet_x) + L", " + std::to_wstring(spritesheet_y) + L"}, " + std::to_wstring(spritesheet_n) + L"cpp\n");
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, spritesheet_x, spritesheet_y, 0, GL_RGBA, GL_UNSIGNED_BYTE, spritesheet_data);
@@ -182,13 +185,14 @@ int main()
 	wlog.log(L"Sprite size: {"+ std::to_wstring(sprite_size.x) + L"," + std::to_wstring(sprite_size.y) +L"}\n");
 	glm::vec2 sprite_size_normalized = sprite_size/spritesheet_size;
 	wlog.log(L"Sprite size (normalized): {"+ std::to_wstring(sprite_size_normalized.x) + L"," + std::to_wstring(sprite_size_normalized.y) +L"}\n");
-	glm::ivec2 n_sprites = spritesheet_size/sprite_size;
-	wlog.log(L"Number of sprites: {"+ std::to_wstring(n_sprites.x) + L"," + std::to_wstring(n_sprites.y) +L"}\n");
+	glm::ivec2 n_vec_sprites = spritesheet_size/sprite_size;
+	int n_sprites = n_vec_sprites.x*n_vec_sprites.y;
+	wlog.log(L"Number of sprites: {"+ std::to_wstring(n_vec_sprites.x) + L"," + std::to_wstring(n_vec_sprites.y) +L"} = " + std::to_wstring(n_sprites) + L" \n");
 
 	process_gl_errors();
 
 	constexpr int x=64,y=64,z=64,total=x*y*z;
-	const int tx=n_sprites.x,ty=n_sprites.y;
+	const int tx=n_vec_sprites.x,ty=n_vec_sprites.y;
 	wlog.log(L"Creating ");
 	wlog.log(std::to_wstring(total), false);
 	wlog.log(L" blocks.\n", false);
@@ -213,15 +217,16 @@ int main()
 
 	wlog.log(L"Creating Chunk Info Texture.\n");
 	std::array<block_id, total> *block_ids = new std::array<block_id, total>;
-	std::generate(block_ids->begin(), block_ids->end(), [_tx=tx,_ty=ty]{
-		static uint8_t t=0;
-		t+=2;
-		if(t==_tx*_ty)
-			t=0;
-		else if(t>_tx*_ty)
-			t=1;
-		// wlog.log(L"Generating " + std::to_wstring(t) + L"\n");
-		return t;
+	std::generate(block_ids->begin(), block_ids->end(), [_x=x,_y=y,n_sprites]{
+		static int x,y,z=y=x=0;
+		static bool first=true;
+		if(!first){
+			if(x>=_x-1){x=0;++y;}
+			else ++x;
+			if(y>=_y){y=0;++z;}
+		} else first=false;
+		int height = abs(x-(_x/2)) + abs(y-(_y/2));
+		return (z>height)?(rand()%(n_sprites+1))+1:0;
 	});
 	glActiveTexture(GL_TEXTURE1);
 	GLuint chunk_info_tex;
@@ -245,10 +250,9 @@ int main()
 	process_gl_errors();
 
 
-	wlog.log(L"Creating and getting camera direction uniform data.\n");
+	wlog.log(L"Creating and getting camera position uniform data.\n");
 	glm::vec3 camera_pos = glm::vec3(x, y, 0.0f);
 	glm::vec3 camera_target = glm::vec3(0.f, 0.f, 0.0f);
-	glm::vec3 camera_dir = glm::normalize(camera_target-camera_pos);
 	GLint camera_dir_uni = glGetUniformLocation(program, "cameraDir");
 	glUniform3fv(camera_dir_uni, 1, glm::value_ptr(camera_pos));
 	process_gl_errors();
