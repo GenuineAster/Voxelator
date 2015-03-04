@@ -19,17 +19,35 @@
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
 using coord_type = uint8_t;
+using block_id = uint8_t;
+
+constexpr coord_type chunk_size_x=64;
+constexpr coord_type chunk_size_y=64;
+constexpr coord_type chunk_size_z=64;
+constexpr uint64_t   chunk_total =chunk_size_x*chunk_size_y*chunk_size_z;
 
 struct block{
 	coord_type x, y, z;
 	block(int x=0, int y=0, int z=0):x(x),y(y),z(z){}
 };
 
+struct chunk{
+	static const glm::ivec3 chunk_size;
+	static std::array<block, chunk_total> *offsets;
+	glm::ivec3 position;
+	std::array<block_id, chunk_total> *IDs;
+	GLenum texnum;
+	GLuint texid;
+	GLuint tex;
+};
+
+const glm::ivec3 chunk::chunk_size = glm::ivec3(chunk_size_x, chunk_size_y, chunk_size_z);
+std::array<block, chunk_total> *chunk::offsets = new std::array<block, chunk_total>;
+
 constexpr int block_offset_x = 0;
 constexpr int block_offset_y = block_offset_x + sizeof(coord_type);
 constexpr int block_offset_z = block_offset_y + sizeof(coord_type);
 
-using block_id = uint8_t;
 
 constexpr float pi = 3.14159;
 
@@ -41,6 +59,18 @@ bool process_gl_errors();
 
 int main()
 {
+	chunk *chunks = new chunk[5]();
+	std::generate(chunk::offsets->begin(), chunk::offsets->end(), []{
+		static uint8_t x,y,z=y=x=0;
+		static bool first=true;
+		if(!first){
+			if(x>=chunk_size_x-1){x=0;++y;}
+			else ++x;
+			if(y>=chunk_size_y){y=0;++z;}
+		} else first=false;
+		return block{x,y,z};
+	});
+
 	std::srand(std::time(NULL));
 	using namespace std::literals::chrono_literals;
 	wlog.log(L"Starting up.\n");
@@ -191,67 +221,56 @@ int main()
 
 	process_gl_errors();
 
-	constexpr int x=64,y=64,z=64,total=x*y*z;
 	const int tx=n_vec_sprites.x,ty=n_vec_sprites.y;
 	wlog.log(L"Creating ");
-	wlog.log(std::to_wstring(total), false);
+	wlog.log(std::to_wstring(chunk_total), false);
 	wlog.log(L" blocks.\n", false);
-	std::array<block,    total> *blocks    = new std::array<block,    total>;
-	std::generate(blocks->begin(), blocks->end(), [_x=x,_y=y]{
-		static uint8_t x,y,z=y=x=0;
-		static bool first=true;
-		if(!first){
-			if(x>=_x-1){x=0;++y;}
-			else ++x;
-			if(y>=_y){y=0;++z;}
-		} else first=false;
-		return block{x,y,z};
-	});
 
 	wlog.log(L"Generating Vertex Buffer Object.\n");
 	GLuint vbo;
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(*blocks), blocks->data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(*chunk::offsets), chunk::offsets->data(), GL_STATIC_DRAW);
 	process_gl_errors();
 
-	wlog.log(L"Creating Chunk Info Texture.\n");
-	std::array<block_id, total> *block_ids = new std::array<block_id, total>;
-	std::generate(block_ids->begin(), block_ids->end(), [_x=x,_y=y,n_sprites]{
-		static int x,y,z=y=x=0;
-		static bool first=true;
-		if(!first){
-			if(x>=_x-1){x=0;++y;}
-			else ++x;
-			if(y>=_y){y=0;++z;}
-		} else first=false;
-		int height = abs(x-(_x/2)) + abs(y-(_y/2));
-		return (z>height)?(rand()%(n_sprites+1))+1:0;
-	});
-	glActiveTexture(GL_TEXTURE1);
-	GLuint chunk_info_tex;
-	glGenTextures(1, &chunk_info_tex);
-	glBindTexture(GL_TEXTURE_3D, chunk_info_tex);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, 0);
-	glTexParameterfv(GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, col);
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RED, x, y, z, 0, GL_RED, GL_UNSIGNED_BYTE, block_ids->data());
-	glGenerateMipmap(GL_TEXTURE_3D);
+	wlog.log(L"Creating Chunk Info Textures.\n");
+
+	for(int i=0;i<5;++i) {
+		chunks[i].tex = 1+i;
+		chunks[i].texnum = GL_TEXTURE1 + i;
+		chunks[i].IDs = new std::array<block_id, chunk_total>;
+		chunks[i].position = glm::vec3(i, 0.f, 0.f);
+		int x,y,z=y=x=0;
+		std::generate(chunks[i].IDs->begin(), chunks[i].IDs->end(), [&x,&y,&z,n_sprites]{
+			static bool first=true;
+			if(!first){
+				if(x>=chunk_size_x-1){x=0;++y;}
+				else ++x;
+				if(y>=chunk_size_y){y=0;++z;}
+			} else first=false;
+			int height = abs(x-(chunk_size_x/2)) + abs(y-(chunk_size_y/2));
+			return (z>height)?(rand()%(n_sprites-1))+1:0;
+		});
+		glActiveTexture(chunks[i].texnum);
+		glGenTextures(1, &chunks[i].texid);
+		glBindTexture(GL_TEXTURE_3D, chunks[i].texid);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, 0);
+		glTexParameterfv(GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, col);
+		glTexImage3D(GL_TEXTURE_3D, 0, GL_RED, chunk_size_x, chunk_size_y, chunk_size_z, 0, GL_RED, GL_UNSIGNED_BYTE, chunks[i].IDs->data());
+		glGenerateMipmap(GL_TEXTURE_3D);
+	}
 	process_gl_errors();
 
 	wlog.log(L"Creating and getting transform uniform data.\n");
-	glm::mat4 transform;
-	transform = glm::translate(transform, glm::vec3(-x, -y, -z));
-	transform = glm::rotate(transform, pi/4.f, glm::vec3(0.0f, 0.0f, 1.0f));
 	GLint transform_uni = glGetUniformLocation(program, "transform");
-	glUniformMatrix4fv(transform_uni, 1, GL_FALSE, glm::value_ptr(transform));
 
 	process_gl_errors();
 
 
 	wlog.log(L"Creating and getting camera position uniform data.\n");
-	glm::vec3 camera_pos = glm::vec3(x, y, 0.0f);
+	glm::vec3 camera_pos = glm::vec3(0.f, 0.f, 0.0f);
 	glm::vec3 camera_target = glm::vec3(0.f, 0.f, 0.0f);
 	GLint camera_dir_uni = glGetUniformLocation(program, "cameraDir");
 	glUniform3fv(camera_dir_uni, 1, glm::value_ptr(camera_pos));
@@ -296,7 +315,7 @@ int main()
 
 	wlog.log(L"Creating and setting block chunk size uniform data.\n");
 	GLint chunk_size_uni = glGetUniformLocation(program, "chunkSize");
-	glUniform3fv(chunk_size_uni, 1, glm::value_ptr(glm::vec3(x,y,z)));
+	glUniform3fv(chunk_size_uni, 1, glm::value_ptr(glm::vec3(chunk_size_x,chunk_size_y,chunk_size_z)));
 
 	process_gl_errors();
 
@@ -333,9 +352,13 @@ int main()
 		}
 		start=end;
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		transform = glm::rotate(transform, ft/3e6f, glm::vec3(0.5f, 0.5f, 0.5f));
-		glUniformMatrix4fv(transform_uni, 1, GL_FALSE, glm::value_ptr(transform));
-		glDrawArrays(GL_POINTS, 0, total);
+		for(int i=0;i<5;++i) {
+			glm::mat4 transform;
+			transform = glm::translate(transform, glm::vec3(chunk::chunk_size)*glm::vec3(chunks[i].position));
+			glUniformMatrix4fv(transform_uni, 1, GL_FALSE, glm::value_ptr(transform));
+			glUniform1i(chunk_id_uni, chunks[i].tex);
+			glDrawArrays(GL_POINTS, 0, chunk_total);
+		}
 		glfwSwapBuffers(win);
 		glfwPollEvents();
 		process_gl_errors();
