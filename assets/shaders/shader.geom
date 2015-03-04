@@ -40,8 +40,8 @@ void main() {
 	float check;
 
 	// Draw first face
-	if(pos_index.z >= 0 || getID(pos_index+ivec3(0, 0, -1)) == 0) {
-	// if(pos_index.z != 0 && getID(pos_index+ivec3(0, 0, -1)) == 0) {
+	// if(pos_index.z >= 0 || getID(pos_index+ivec3(0, 0, -1)) == 0) {
+	if(pos_index.z != 0 && getID(pos_index+ivec3(0, 0, -1)) == 0) {
 		normal = normalize(vec3(preEndTrans*vec4(0.0, 0.0, -1.0, 0.0)));
 		check  = dot(cam2tri, normal);
 		if(check <= 0) {
@@ -66,8 +66,8 @@ void main() {
 		}
 	}
 	// Draw second face
-	if(pos_index.x >= 0 || getID(pos_index+ivec3(-1, 0, 0)) == 0) {
-	// if(pos_index.x != 0 && getID(pos_index+ivec3(-1, 0, 0)) == 0) {
+	// if(pos_index.x >= 0 || getID(pos_index+ivec3(-1, 0, 0)) == 0) {
+	if(pos_index.x != 0 && getID(pos_index+ivec3(-1, 0, 0)) == 0) {
 		normal = normalize(vec3(preEndTrans*vec4(-1.0, 0.0, 0.0, 0.0)));
 		check  = dot(cam2tri, normal);
 		if(check <= 0) {
@@ -92,8 +92,8 @@ void main() {
 		}
 	}
 	// Draw third face
-	if(pos_index.y >= 0 || getID(pos_index+ivec3(0, -1, 0)) == 0) {
-	// if(pos_index.y != 0 && getID(pos_index+ivec3(0, -1, 0)) == 0) {
+	// if(pos_index.y >= 0 || getID(pos_index+ivec3(0, -1, 0)) == 0) {
+	if(pos_index.y != 0 && getID(pos_index+ivec3(0, -1, 0)) == 0) {
 		normal = normalize(vec3(preEndTrans*vec4(0.0, -1.0, 0.0, 0.0)));
 		check  = dot(cam2tri, normal);
 		if(check <= 0) {
@@ -118,8 +118,8 @@ void main() {
 		}
 	}
 	// Draw fourth face
-	if(pos_index.x <= chunkSize.x-1 || getID(pos_index+ivec3(1, 0, 0)) == 0) {
-	// if(pos_index.x != chunkSize.x-1 && getID(pos_index+ivec3(1, 0, 0)) == 0) {
+	// if(pos_index.x <= chunkSize.x-1 || getID(pos_index+ivec3(1, 0, 0)) == 0) {
+	if(pos_index.x != chunkSize.x-1 && getID(pos_index+ivec3(1, 0, 0)) == 0) {
 		normal = normalize(vec3(preEndTrans*vec4(1.0, 0.0, 0.0, 0.0)));
 		check  = dot(cam2tri, normal);
 		if(check <= 0) {
@@ -144,8 +144,8 @@ void main() {
 		}
 	}
 	// Draw fifth face
-	if(pos_index.y <= chunkSize.y-1 || getID(pos_index+ivec3(0, 1, 0)) == 0) {
-	// if(pos_index.y != chunkSize.y-1 && getID(pos_index+ivec3(0, 1, 0)) == 0) {
+	// if(pos_index.y <= chunkSize.y-1 || getID(pos_index+ivec3(0, 1, 0)) == 0) {
+	if(pos_index.y != chunkSize.y-1 && getID(pos_index+ivec3(0, 1, 0)) == 0) {
 		normal = normalize(vec3(preEndTrans*vec4(0.0, 1.0, 0.0, 0.0)));
 		check  = dot(cam2tri, normal);
 		if(check <= 0) {
@@ -170,8 +170,8 @@ void main() {
 		}
 	}
 	// Draw sixth face
-	if(pos_index.z <= chunkSize.z-1 || getID(pos_index+ivec3(0, 0, 1)) == 0) {
-	// if(pos_index.z != chunkSize.z-1 && getID(pos_index+ivec3(0, 0, 1)) == 0) {
+	// if(pos_index.z <= chunkSize.z-1 || getID(pos_index+ivec3(0, 0, 1)) == 0) {
+	if(pos_index.z != chunkSize.z-1 && getID(pos_index+ivec3(0, 0, 1)) == 0) {
 		normal = normalize(vec3(preEndTrans*vec4(0.0, 0.0, 1.0, 0.0)));
 		check  = dot(cam2tri, normal);
 		if(check <= 0) {

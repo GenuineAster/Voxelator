@@ -7,6 +7,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <Logger/Logger.hpp>
 #include <thread>
+#include <vector>
 #include <sstream>
 #include <fstream>
 #include <iostream>
@@ -75,7 +76,13 @@ bool process_gl_errors();
 
 int main()
 {
-	chunk *chunks = new chunk[5]();
+	std::vector<std::vector<chunk>> chunks(6);
+	for(auto &v : chunks) {
+		v.resize(6);
+		for(auto &c : v) {
+			c = chunk();
+		}
+	}
 	std::generate(chunk::offsets->begin(), chunk::offsets->end(), []{
 		static uint8_t x,y,z=y=x=0;
 		static bool first=true;
@@ -215,6 +222,8 @@ int main()
 	glBindTexture(GL_TEXTURE_2D, spritesheet_tex);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 4);
 	float col[] = { 0.0f, 1.0f, 0.0f, 1.0f };
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, col);
@@ -251,31 +260,34 @@ int main()
 
 	wlog.log(L"Creating Chunk Info Textures.\n");
 
-	for(int i=0;i<5;++i) {
-		chunks[i].tex = 1+i;
-		chunks[i].texnum = GL_TEXTURE1 + i;
-		chunks[i].IDs = new std::array<block_id, chunk_total>;
-		chunks[i].position = glm::vec3(i, 0.f, 0.f);
-		int x,y,z=y=x=0;
-		std::generate(chunks[i].IDs->begin(), chunks[i].IDs->end(), [&x,&y,&z,n_sprites]{
-			static bool first=true;
-			if(!first){
-				if(x>=chunk_size_x-1){x=0;++y;}
-				else ++x;
-				if(y>=chunk_size_y){y=0;++z;}
-			} else first=false;
-			int height = abs(x-(chunk_size_x/2)) + abs(y-(chunk_size_y/2));
-			return (z>height)?(rand()%(n_sprites-1))+1:0;
-		});
-		glActiveTexture(chunks[i].texnum);
-		glGenTextures(1, &chunks[i].texid);
-		glBindTexture(GL_TEXTURE_3D, chunks[i].texid);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, 0);
-		glTexParameterfv(GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, col);
-		glTexImage3D(GL_TEXTURE_3D, 0, GL_RED, chunk_size_x, chunk_size_y, chunk_size_z, 0, GL_RED, GL_UNSIGNED_BYTE, chunks[i].IDs->data());
-		glGenerateMipmap(GL_TEXTURE_3D);
+	for(int x=0;x<chunks.size();++x) {
+		for(int y=0;y<chunks[x].size();++y) {
+			int i = x*chunks[x].size()+y;
+			chunks[x][y].tex = 1+i;
+			chunks[x][y].texnum = GL_TEXTURE1 + i;
+			chunks[x][y].IDs = new std::array<block_id, chunk_total>;
+			chunks[x][y].position = glm::vec3(x, y, 0.f);
+			int _x,_y,_z=_y=_x=0;
+			bool first=true;
+			std::generate(chunks[x][y].IDs->begin(), chunks[x][y].IDs->end(), [&x=_x,&y=_y,&z=_z,n_sprites,&first]{
+				if(!first){
+					if(x>=chunk_size_x-1){x=0;++y;}
+					else ++x;
+					if(y>=chunk_size_y){y=0;++z;}
+				} else first=false;
+				int height = abs(x-(chunk_size_x/2)) + abs(y-(chunk_size_y/2));
+				return (z>height)?(rand()%(n_sprites-1))+1:0;
+			});
+			glActiveTexture(chunks[x][y].texnum);
+			glGenTextures(1, &chunks[x][y].texid);
+			glBindTexture(GL_TEXTURE_3D, chunks[x][y].texid);
+			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, 0);
+			glTexParameterfv(GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, col);
+			glTexImage3D(GL_TEXTURE_3D, 0, GL_RED, chunk_size_x, chunk_size_y, chunk_size_z, 0, GL_RED, GL_UNSIGNED_BYTE, chunks[x][y].IDs->data());
+			glGenerateMipmap(GL_TEXTURE_3D);
+		}
 	}
 	process_gl_errors();
 
@@ -419,18 +431,28 @@ int main()
 		if(glfwGetKey(win, GLFW_KEY_LEFT)) {
 			cam.position += -cam.right*fts*20.f;
 		}
+		if(glfwGetKey(win, GLFW_KEY_SPACE)) {
+			cam.position += cam.up*fts*20.f;
+		}
+		if(glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL)) {
+			cam.position += -cam.up*fts*20.f;
+		}
 
 		view = glm::lookAt(cam.position, cam.position + cam.direction*10.f, cam.up);
 		glUniformMatrix4fv(view_uni, 1, GL_FALSE, glm::value_ptr(view));
 		glUniform3fv(camera_pos_uni, 1, glm::value_ptr(cam.position));
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		for(int i=0;i<5;++i) {
-			glm::mat4 transform;
-			transform = glm::translate(transform, glm::vec3(chunk::chunk_size)*glm::vec3(chunks[i].position));
-			glUniformMatrix4fv(transform_uni, 1, GL_FALSE, glm::value_ptr(transform));
-			glUniform1i(chunk_id_uni, chunks[i].tex);
-			glDrawArrays(GL_POINTS, 0, chunk_total);
+		int i = 0;
+		for(int x=0;x<chunks.size();++x) {
+			for(int y=0;y<chunks[x].size();++y) {
+				int i = x*chunks[x].size()+y;
+				glm::mat4 transform;
+				transform = glm::translate(transform, glm::vec3(chunk::chunk_size)*glm::vec3(chunks[x][y].position));
+				glUniformMatrix4fv(transform_uni, 1, GL_FALSE, glm::value_ptr(transform));
+				glUniform1i(chunk_id_uni, chunks[x][y].tex);
+				glDrawArrays(GL_POINTS, 0, chunk_total);
+			}
 		}
 		glfwSwapBuffers(win);
 		glfwPollEvents();
@@ -439,11 +461,13 @@ int main()
 	}
 
 	delete chunk::offsets;
-	for(int i = 0; i < 5; ++i) {
-		glDeleteTextures(1, &chunks[i].texid);
-		delete chunks[i].IDs;
+	for(int x = 0; x < chunks.size(); ++x) {
+		for(int y = 0; y < chunks[x].size(); ++y) {
+			int i = x*chunks[x].size()+y;
+			glDeleteTextures(1, &(chunks[x][y].texid));
+			delete chunks[x][y].IDs;
+		}
 	}
-	delete[] chunks;
 	glfwDestroyWindow(win);
 
 	glDeleteShader(shader_vert);
