@@ -272,8 +272,8 @@ int main()
 	wlog.log(L"Creating and getting camera position uniform data.\n");
 	glm::vec3 camera_pos = glm::vec3(0.f, 0.f, 0.0f);
 	glm::vec3 camera_target = glm::vec3(0.f, 0.f, 0.0f);
-	GLint camera_dir_uni = glGetUniformLocation(program, "cameraDir");
-	glUniform3fv(camera_dir_uni, 1, glm::value_ptr(camera_pos));
+	GLint camera_pos_uni = glGetUniformLocation(program, "cameraPos");
+	glUniform3fv(camera_pos_uni, 1, glm::value_ptr(camera_pos));
 	process_gl_errors();
 
 	wlog.log(L"Creating and getting view uniform data.\n");

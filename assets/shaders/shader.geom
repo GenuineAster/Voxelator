@@ -8,7 +8,7 @@ out vec2 gTexcoords;
 uniform sampler3D IDTex;
 uniform vec3 chunkSize;
 uniform vec2 spriteSizeNormalized;
-uniform vec3 cameraDir;
+uniform vec3 cameraPos;
 uniform mat4 transform;
 uniform mat4 projection;
 uniform mat4 view;
@@ -34,7 +34,7 @@ void main() {
 	mat4 preEndTrans = view*transform;
 	mat4 endTrans = projection * view * transform;
 	
-	vec3 cam2tri = normalize(vec3(preEndTrans*pos)-vec3(view*vec4(cameraDir, 0.0)));
+	vec3 cam2tri = normalize(vec3(preEndTrans*pos)-vec3(view*vec4(cameraPos, 0.0)));
 
 	vec3 normal;
 	float check;
