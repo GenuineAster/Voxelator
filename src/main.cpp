@@ -438,7 +438,19 @@ int main()
 		// std::this_thread::sleep_for(16ms);
 	}
 
+	delete chunk::offsets;
+	for(int i = 0; i < 5; ++i) {
+		glDeleteTextures(1, &chunks[i].texid);
+		delete chunks[i].IDs;
+	}
+	delete[] chunks;
 	glfwDestroyWindow(win);
+
+	glDeleteShader(shader_vert);
+	glDeleteShader(shader_frag);
+	glDeleteShader(shader_geom);
+	glDeleteProgram(program);
+	glDeleteBuffers(1, &vbo);
 
 	return cleanup(0);
 }
