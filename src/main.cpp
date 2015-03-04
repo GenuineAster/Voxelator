@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <Logger/Logger.hpp>
 #include <thread>
 #include <sstream>
@@ -25,6 +26,21 @@ constexpr coord_type chunk_size_x=64;
 constexpr coord_type chunk_size_y=64;
 constexpr coord_type chunk_size_z=64;
 constexpr uint64_t   chunk_total =chunk_size_x*chunk_size_y*chunk_size_z;
+
+struct camera {
+	static const glm::vec3 _direction;
+	static const glm::vec3 _up;
+	static const glm::vec3 _right;
+	glm::vec3 up = _up;
+	glm::vec3 direction = _direction;
+	glm::vec3 right = _right;
+	glm::vec3 position;
+	glm::quat orientation;
+};
+
+const glm::vec3 camera::_direction = glm::vec3( 1.f, 0.f, 0.f);
+const glm::vec3 camera::_up        = glm::vec3( 0.f, 1.f, 0.f);
+const glm::vec3 camera::_right     = glm::vec3( 0.f, 0.f, 1.f);
 
 struct block{
 	coord_type x, y, z;
@@ -270,17 +286,18 @@ int main()
 
 
 	wlog.log(L"Creating and getting camera position uniform data.\n");
-	glm::vec3 camera_pos = glm::vec3(0.f, 0.f, 0.0f);
-	glm::vec3 camera_target = glm::vec3(0.f, 0.f, 0.0f);
+
+	camera cam;
+
 	GLint camera_pos_uni = glGetUniformLocation(program, "cameraPos");
-	glUniform3fv(camera_pos_uni, 1, glm::value_ptr(camera_pos));
+	glUniform3fv(camera_pos_uni, 1, glm::value_ptr(cam.position));
 	process_gl_errors();
 
 	wlog.log(L"Creating and getting view uniform data.\n");
 	glm::mat4 view = glm::lookAt(
-		camera_pos,
-		camera_target,
-		glm::vec3(-1.0f, 0.0f, 0.0f)
+		cam.position,
+		cam.direction,
+		cam.up
 	);
 	GLint view_uni = glGetUniformLocation(program, "view");
 	glUniformMatrix4fv(view_uni, 1, GL_FALSE, glm::value_ptr(view));
@@ -340,6 +357,7 @@ int main()
 	while(!glfwWindowShouldClose(win)) {
 		end = std::chrono::high_resolution_clock::now();
 		long int ft = (std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
+		float fts = ft/1e6f;
 		ft_total += ft;
 		++cnt;
 		if(std::chrono::duration_cast<std::chrono::seconds>(end-timetoprint).count() >= 1) {
@@ -351,6 +369,61 @@ int main()
 			ft_total=0.L;
 		}
 		start=end;
+
+		if(glfwGetKey(win, GLFW_KEY_Q)) {
+			cam.orientation = glm::rotate(cam.orientation, -1*fts, camera::_direction);
+			cam.direction = cam.orientation * camera::_direction * glm::conjugate(cam.orientation);
+			cam.up        = cam.orientation * camera::_up  * glm::conjugate(cam.orientation);
+			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation);
+		}
+		if(glfwGetKey(win, GLFW_KEY_E)) {
+			cam.orientation = glm::rotate(cam.orientation,  1*fts, camera::_direction);
+			cam.direction = cam.orientation * camera::_direction  * glm::conjugate(cam.orientation);
+			cam.up        = cam.orientation * camera::_up  * glm::conjugate(cam.orientation);
+			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation);
+		}
+		if(glfwGetKey(win, GLFW_KEY_W)) {
+			cam.orientation = glm::rotate(cam.orientation,  1*fts, camera::_right);
+			cam.direction = cam.orientation * camera::_direction  * glm::conjugate(cam.orientation);
+			cam.up        = cam.orientation * camera::_up  * glm::conjugate(cam.orientation);
+			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation);
+		}
+		if(glfwGetKey(win, GLFW_KEY_S)) {
+			cam.orientation = glm::rotate(cam.orientation,  -1*fts, camera::_right);
+			cam.direction = cam.orientation * camera::_direction  * glm::conjugate(cam.orientation);
+			cam.up        = cam.orientation * camera::_up * glm::conjugate(cam.orientation);
+			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation);
+		}
+		if(glfwGetKey(win, GLFW_KEY_A)) {
+			cam.orientation = glm::rotate(cam.orientation,  1*fts, camera::_up);
+			cam.direction = cam.orientation * camera::_direction * glm::conjugate(cam.orientation);
+			cam.up        = cam.orientation * camera::_up * glm::conjugate(cam.orientation);
+			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation);
+		}
+		if(glfwGetKey(win, GLFW_KEY_D)) {
+			cam.orientation = glm::rotate(cam.orientation,  -1*fts, camera::_up);
+			cam.direction = cam.orientation * camera::_direction * glm::conjugate(cam.orientation);
+			cam.up        = cam.orientation * camera::_up * glm::conjugate(cam.orientation);
+			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation);
+		}
+		cam.orientation = glm::normalize(cam.orientation);
+		if(glfwGetKey(win, GLFW_KEY_UP)) {
+		 	cam.position += cam.direction*fts*20.f;
+		}
+		if(glfwGetKey(win, GLFW_KEY_DOWN)) {
+		 	cam.position += -cam.direction*fts*20.f;
+		}
+		if(glfwGetKey(win, GLFW_KEY_RIGHT)) {
+			cam.position += cam.right*fts*20.f;
+		}
+		if(glfwGetKey(win, GLFW_KEY_LEFT)) {
+			cam.position += -cam.right*fts*20.f;
+		}
+
+		view = glm::lookAt(cam.position, cam.position + cam.direction*10.f, cam.up);
+		glUniformMatrix4fv(view_uni, 1, GL_FALSE, glm::value_ptr(view));
+		glUniform3fv(camera_pos_uni, 1, glm::value_ptr(cam.position));
+
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		for(int i=0;i<5;++i) {
 			glm::mat4 transform;
