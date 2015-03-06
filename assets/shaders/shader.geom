@@ -4,6 +4,7 @@ layout(points) in;
 layout(triangle_strip, max_vertices = 12) out;
 
 out vec2 gTexcoords;
+out float dist;
 
 uniform sampler3D IDTex;
 uniform vec3 chunkSize;
@@ -35,6 +36,7 @@ void main() {
 	mat4 endTrans = projection * view * transform;
 	
 	vec3 cam2tri = vec3(preEndTrans*pos)-vec3(view*vec4(cameraPos, 0.0));
+	dist = length(cam2tri);
 	cam2tri = normalize(cam2tri);
 
 	vec3 normal;
