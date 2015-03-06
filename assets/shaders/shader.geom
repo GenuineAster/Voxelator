@@ -1,7 +1,7 @@
 #version 430
 
 layout(points) in;
-layout(triangle_strip, max_vertices = 15) out;
+layout(triangle_strip, max_vertices = 12) out;
 
 out vec2 gTexcoords;
 
@@ -34,7 +34,8 @@ void main() {
 	mat4 preEndTrans = view*transform;
 	mat4 endTrans = projection * view * transform;
 	
-	vec3 cam2tri = normalize(vec3(preEndTrans*pos)-vec3(view*vec4(cameraPos, 0.0)));
+	vec3 cam2tri = vec3(preEndTrans*pos)-vec3(view*vec4(cameraPos, 0.0));
+	cam2tri = normalize(cam2tri);
 
 	vec3 normal;
 	float check;
@@ -56,9 +57,6 @@ void main() {
 			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
 			EmitVertex();
 			//   Second triangle
-			gl_Position = endTrans * (pos + vec4(1.0, 0.0, 0.0, 0.0));
-			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
-			EmitVertex();
 			gl_Position = endTrans * (pos + vec4(1.0, 1.0, 0.0, 0.0));
 			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
 			EmitVertex();
@@ -82,9 +80,6 @@ void main() {
 			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
 			EmitVertex();
 			//   Second triangle
-			gl_Position = endTrans * (pos + vec4(0.0, 1.0, 0.0, 0.0));
-			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-			EmitVertex();
 			gl_Position = endTrans * (pos + vec4(0.0, 1.0, 1.0, 0.0));
 			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
 			EmitVertex();
@@ -108,9 +103,6 @@ void main() {
 			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
 			EmitVertex();
 			//   Second triangle
-			gl_Position = endTrans * (pos + vec4(0.0, 0.0, 1.0, 0.0));
-			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-			EmitVertex();
 			gl_Position = endTrans * (pos + vec4(1.0, 0.0, 1.0, 0.0));
 			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
 			EmitVertex();
@@ -134,9 +126,6 @@ void main() {
 			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
 			EmitVertex();
 			//   Second triangle
-			gl_Position = endTrans * (pos + vec4(1.0, 1.0, 0.0, 0.0));
-			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-			EmitVertex();
 			gl_Position = endTrans * (pos + vec4(1.0, 0.0, 0.0, 0.0));
 			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 0.0);
 			EmitVertex();
@@ -160,9 +149,6 @@ void main() {
 			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
 			EmitVertex();
 			//   Second triangle
-			gl_Position = endTrans * (pos + vec4(0.0, 1.0, 1.0, 0.0));
-			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-			EmitVertex();
 			gl_Position = endTrans * (pos + vec4(0.0, 1.0, 0.0, 0.0));
 			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 0.0);
 			EmitVertex();
@@ -186,9 +172,6 @@ void main() {
 			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
 			EmitVertex();
 			//   Second triangle
-			gl_Position = endTrans * (pos + vec4(1.0, 0.0, 1.0, 0.0));
-			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
-			EmitVertex();
 			gl_Position = endTrans * (pos + vec4(0.0, 0.0, 1.0, 0.0));
 			gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 0.0);
 			EmitVertex();
