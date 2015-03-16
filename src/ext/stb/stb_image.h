@@ -1,6 +1,5 @@
 /* stb_image - v2.02 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
-
  ============================    Contributors    =========================
 
  Image formats                                Bug fixes & warning fixes

@@ -62,8 +62,11 @@ struct chunk{
 	GLuint tex;
 };
 
-const glm::ivec3 chunk::chunk_size = glm::ivec3(chunk_size_x, chunk_size_y, chunk_size_z);
-std::array<block, chunk_total> *chunk::offsets = new std::array<block, chunk_total>;
+const glm::ivec3 chunk::chunk_size = glm::ivec3(
+	chunk_size_x, chunk_size_y, chunk_size_z
+);
+std::array<block, chunk_total> *chunk::offsets = 
+	new std::array<block, chunk_total>;
 
 constexpr int block_offset_x = 0;
 constexpr int block_offset_y = block_offset_x + sizeof(coord_type);
@@ -104,7 +107,11 @@ int main()
 	wlog.log(L"Initializing GLFW.\n");
 	if(!glfwInit())
 		return cleanup(-1);
-	glfwSetErrorCallback([]([[gnu::unused]] int a, const char* b){wlog.log(std::wstring{b, b+std::strlen(b)}+L"\n");});
+	glfwSetErrorCallback(
+		[]([[gnu::unused]] int a, const char* b){
+			wlog.log(std::wstring{b, b+std::strlen(b)}+L"\n");
+		}
+	);
 	wlog.log(L"Creating window.\n");
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -112,7 +119,9 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
-	GLFWwindow *win = glfwCreateWindow(640, 480, "Voxelator!", nullptr, nullptr);
+	GLFWwindow *win = glfwCreateWindow(
+		640, 480, "Voxelator!", nullptr, nullptr
+	);
 	if(!win)
 		return cleanup(-2);
 
@@ -125,7 +134,10 @@ int main()
 
 	process_gl_errors();
 
-	wlog.log(L"Any errors produced directly after GLEW initialization should be ignorable.\n");
+	wlog.log(
+		L"Any errors produced directly after GLEW initialization "
+		L"should be ignorable.\n"
+	);
 
 	glEnable(GL_DEPTH_TEST);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -233,20 +245,39 @@ int main()
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, col);
 	int spritesheet_x, spritesheet_y, spritesheet_n;
 	unsigned char *spritesheet_data = stbi_load(
-		"assets/images/spritesheet2.png", &spritesheet_x, &spritesheet_y, &spritesheet_n, 4
+		"assets/images/spritesheet2.png", &spritesheet_x, &spritesheet_y,
+		&spritesheet_n, 4
 	);
-	wlog.log(L"Spritesheet size: {" + std::to_wstring(spritesheet_x) + L", " + std::to_wstring(spritesheet_y) + L"}, " + std::to_wstring(spritesheet_n) + L"cpp\n");
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, spritesheet_x, spritesheet_y, 0, GL_RGBA, GL_UNSIGNED_BYTE, spritesheet_data);
+	wlog.log(
+		L"Spritesheet size: {" + std::to_wstring(spritesheet_x) + 
+		L", " + std::to_wstring(spritesheet_y) + L"}, " + 
+		std::to_wstring(spritesheet_n) + L"cpp\n"
+	);
+	glTexImage2D(
+		GL_TEXTURE_2D, 0, GL_RGBA, spritesheet_x, spritesheet_y, 0, 
+		GL_RGBA, GL_UNSIGNED_BYTE, spritesheet_data
+	);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	stbi_image_free(spritesheet_data);
 	glm::vec2 spritesheet_size(spritesheet_x, spritesheet_y);
 	glm::vec2 sprite_size(16, 16);
-	wlog.log(L"Sprite size: {"+ std::to_wstring(sprite_size.x) + L"," + std::to_wstring(sprite_size.y) +L"}\n");
+	wlog.log(
+		L"Sprite size: {"+ std::to_wstring(sprite_size.x) + 
+		L"," + std::to_wstring(sprite_size.y) +L"}\n"
+	);
 	glm::vec2 sprite_size_normalized = sprite_size/spritesheet_size;
-	wlog.log(L"Sprite size (normalized): {"+ std::to_wstring(sprite_size_normalized.x) + L"," + std::to_wstring(sprite_size_normalized.y) +L"}\n");
+	wlog.log(
+		L"Sprite size (normalized): {" + 
+		std::to_wstring(sprite_size_normalized.x) + L"," +
+		std::to_wstring(sprite_size_normalized.y) +L"}\n"
+	);
 	glm::ivec2 n_vec_sprites = spritesheet_size/sprite_size;
 	int n_sprites = n_vec_sprites.x*n_vec_sprites.y;
-	wlog.log(L"Number of sprites: {"+ std::to_wstring(n_vec_sprites.x) + L"," + std::to_wstring(n_vec_sprites.y) +L"} = " + std::to_wstring(n_sprites) + L" \n");
+	wlog.log(
+		L"Number of sprites: {"+ std::to_wstring(n_vec_sprites.x) + L"," + 
+		std::to_wstring(n_vec_sprites.y) +L"} = " + std::to_wstring(n_sprites) +
+		L" \n"
+	);
 
 	process_gl_errors();
 
@@ -258,7 +289,10 @@ int main()
 	GLuint vbo;
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(*chunk::offsets), chunk::offsets->data(), GL_STATIC_DRAW);
+	glBufferData(
+		GL_ARRAY_BUFFER, sizeof(*chunk::offsets),
+		chunk::offsets->data(), GL_STATIC_DRAW
+	);
 	process_gl_errors();
 
 	wlog.log(L"Creating Chunk Info Textures.\n");
@@ -272,15 +306,18 @@ int main()
 			chunks[x][y].position = glm::vec3(x, y, 0.f);
 			int _x,_y,_z=_y=_x=0;
 			bool first=true;
-			std::generate(chunks[x][y].IDs->begin(), chunks[x][y].IDs->end(), [&x=_x,&y=_y,&z=_z,n_sprites,&first]{
-				if(!first){
-					if(x>=chunk_size_x-1){x=0;++y;}
-					else ++x;
-					if(y>=chunk_size_y){y=0;++z;}
-				} else first=false;
-				int height = abs(x-(chunk_size_x/2)) + abs(y-(chunk_size_y/2));
-				return (z>height)?(rand()%(n_sprites-1))+1:0;
-			});
+			std::generate(chunks[x][y].IDs->begin(), chunks[x][y].IDs->end(), 
+				[&x=_x,&y=_y,&z=_z,n_sprites,&first]{
+					if(!first){
+						if(x>=chunk_size_x-1){x=0;++y;}
+						else ++x;
+						if(y>=chunk_size_y){y=0;++z;}
+					} else first=false;
+					int height = abs(x-(chunk_size_x/2)) + 
+						abs(y-(chunk_size_y/2));
+					return (z>height)?(rand()%(n_sprites-1))+1:0;
+				}
+			);
 			glActiveTexture(chunks[x][y].texnum);
 			glGenTextures(1, &chunks[x][y].texid);
 			glBindTexture(GL_TEXTURE_3D, chunks[x][y].texid);
@@ -288,7 +325,11 @@ int main()
 			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, 0);
 			glTexParameterfv(GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, col);
-			glTexImage3D(GL_TEXTURE_3D, 0, GL_RED, chunk_size_x, chunk_size_y, chunk_size_z, 0, GL_RED, GL_UNSIGNED_BYTE, chunks[x][y].IDs->data());
+			glTexImage3D(
+				GL_TEXTURE_3D, 0, GL_RED, chunk_size_x, chunk_size_y, 
+				chunk_size_z, 0, GL_RED, GL_UNSIGNED_BYTE, 
+				chunks[x][y].IDs->data()
+			);
 			glGenerateMipmap(GL_TEXTURE_3D);
 		}
 	}
@@ -321,14 +362,18 @@ int main()
 
 
 	wlog.log(L"Creating and getting projection uniform data.\n");
-	glm::mat4 projection = glm::perspective(pi/3.f, 640.0f / 480.0f, 0.01f, 1000.0f);
+	glm::mat4 projection = glm::perspective(
+		pi/3.f, 640.0f/480.0f, 0.01f, 1000.0f
+	);
 	GLint projection_uni = glGetUniformLocation(program, "projection");
 	glUniformMatrix4fv(projection_uni, 1, GL_FALSE, glm::value_ptr(projection));
 
 	process_gl_errors();
 
 	wlog.log(L"Creating and setting normalized sprite size uniform data.\n");
-	GLint sprite_size_uni = glGetUniformLocation(program, "spriteSizeNormalized");
+	GLint sprite_size_uni = glGetUniformLocation(
+		program, "spriteSizeNormalized"
+	);
 	glUniform2fv(sprite_size_uni, 1, glm::value_ptr(sprite_size_normalized));
 
 	process_gl_errors();
@@ -347,7 +392,9 @@ int main()
 
 	wlog.log(L"Creating and setting block chunk size uniform data.\n");
 	GLint chunk_size_uni = glGetUniformLocation(program, "chunkSize");
-	glUniform3fv(chunk_size_uni, 1, glm::value_ptr(glm::vec3(chunk_size_x,chunk_size_y,chunk_size_z)));
+	glUniform3fv(chunk_size_uni, 1, glm::value_ptr(
+		glm::vec3(chunk_size_x,chunk_size_y,chunk_size_z))
+	);
 
 	process_gl_errors();
 
@@ -358,7 +405,8 @@ int main()
 
 	process_gl_errors();
 
-	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now(), end = start, timetoprint = start;
+	std::chrono::high_resolution_clock::time_point start, end, timetoprint;
+	timetoprint = end = start = std::chrono::high_resolution_clock::now();
 
 	glFlush();
 
@@ -371,15 +419,22 @@ int main()
 
 	while(!glfwWindowShouldClose(win)) {
 		end = std::chrono::high_resolution_clock::now();
-		long int ft = (std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
+		long int ft = std::chrono::duration_cast<std::chrono::microseconds>(
+			end-start
+		).count();
 		double fts = static_cast<double>(ft)/1e6L;
 		float fts_float = static_cast<float>(fts);
 		ft_total += ft;
 		++cnt;
-		if(std::chrono::duration_cast<std::chrono::seconds>(end-timetoprint).count() >= 1) {
+		auto tslastprint = std::chrono::duration_cast<std::chrono::seconds>(
+			end-timetoprint
+		).count();
+		if(tslastprint >= 1) {
 			timetoprint = std::chrono::high_resolution_clock::now();
 			float ft_avg = ft_total/cnt;
-			std::wstring frametimestr = L"FPS avg: "+std::to_wstring(1e6L/ft_avg) + L"\t" L"Frametime avg: "+std::to_wstring(ft_avg)+L"µs\n";
+			std::wstring frametimestr = L"FPS avg: " + 
+				std::to_wstring(1e6L/ft_avg) + L"\t" +
+				L"Frametime avg: "+std::to_wstring(ft_avg)+L"µs\n";
 			wlog.log(frametimestr);
 			cnt=0;
 			ft_total=0.L;
@@ -387,40 +442,70 @@ int main()
 		start=end;
 
 		if(glfwGetKey(win, GLFW_KEY_Q)) {
-			cam.orientation = glm::rotate(cam.orientation, -1*fts_float, camera::_direction);
-			cam.direction = cam.orientation * camera::_direction * glm::conjugate(cam.orientation) * fts_float;
-			cam.up        = cam.orientation * camera::_up  * glm::conjugate(cam.orientation) * fts_float;
-			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation) * fts_float;
+			cam.orientation = glm::rotate(
+				cam.orientation, -1*fts_float, camera::_direction
+			);
+			cam.direction = cam.orientation * camera::_direction * 
+				glm::conjugate(cam.orientation) * fts_float;
+			cam.up        = cam.orientation * camera::_up  * 
+				glm::conjugate(cam.orientation) * fts_float;
+			cam.right     = cam.orientation * camera::_right  * 
+				glm::conjugate(cam.orientation) * fts_float;
 		}
 		if(glfwGetKey(win, GLFW_KEY_E)) {
-			cam.orientation = glm::rotate(cam.orientation,  1*fts_float, camera::_direction);
-			cam.direction = cam.orientation * camera::_direction  * glm::conjugate(cam.orientation) * fts_float;
-			cam.up        = cam.orientation * camera::_up  * glm::conjugate(cam.orientation) * fts_float;
-			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation) * fts_float;
+			cam.orientation = glm::rotate(
+				cam.orientation,  1*fts_float, camera::_direction
+			);
+			cam.direction = cam.orientation * camera::_direction  * 
+				glm::conjugate(cam.orientation) * fts_float;
+			cam.up        = cam.orientation * camera::_up  * 
+				glm::conjugate(cam.orientation) * fts_float;
+			cam.right     = cam.orientation * camera::_right  * 
+				glm::conjugate(cam.orientation) * fts_float;
 		}
 		if(glfwGetKey(win, GLFW_KEY_W)) {
-			cam.orientation = glm::rotate(cam.orientation,  1*fts_float, camera::_right);
-			cam.direction = cam.orientation * camera::_direction  * glm::conjugate(cam.orientation) * fts_float;
-			cam.up        = cam.orientation * camera::_up  * glm::conjugate(cam.orientation) * fts_float;
-			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation) * fts_float;
+			cam.orientation = glm::rotate(
+				cam.orientation,  1*fts_float, camera::_right
+			);
+			cam.direction = cam.orientation * camera::_direction  * 
+				glm::conjugate(cam.orientation) * fts_float;
+			cam.up        = cam.orientation * camera::_up  * 
+				glm::conjugate(cam.orientation) * fts_float;
+			cam.right     = cam.orientation * camera::_right  * 
+				glm::conjugate(cam.orientation) * fts_float;
 		}
 		if(glfwGetKey(win, GLFW_KEY_S)) {
-			cam.orientation = glm::rotate(cam.orientation,  -1*fts_float, camera::_right);
-			cam.direction = cam.orientation * camera::_direction  * glm::conjugate(cam.orientation) * fts_float;
-			cam.up        = cam.orientation * camera::_up * glm::conjugate(cam.orientation) * fts_float;
-			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation) * fts_float;
+			cam.orientation = glm::rotate(
+				cam.orientation,  -1*fts_float, camera::_right
+			);
+			cam.direction = cam.orientation * camera::_direction  * 
+				glm::conjugate(cam.orientation) * fts_float;
+			cam.up        = cam.orientation * camera::_up * 
+				glm::conjugate(cam.orientation) * fts_float;
+			cam.right     = cam.orientation * camera::_right  * 
+				glm::conjugate(cam.orientation) * fts_float;
 		}
 		if(glfwGetKey(win, GLFW_KEY_A)) {
-			cam.orientation = glm::rotate(cam.orientation,  1*fts_float, camera::_up);
-			cam.direction = cam.orientation * camera::_direction * glm::conjugate(cam.orientation) * fts_float;
-			cam.up        = cam.orientation * camera::_up * glm::conjugate(cam.orientation) * fts_float;
-			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation) * fts_float;
+			cam.orientation = glm::rotate(
+				cam.orientation,  1*fts_float, camera::_up
+			);
+			cam.direction = cam.orientation * camera::_direction * 
+				glm::conjugate(cam.orientation) * fts_float;
+			cam.up        = cam.orientation * camera::_up * 
+				glm::conjugate(cam.orientation) * fts_float;
+			cam.right     = cam.orientation * camera::_right  * 
+				glm::conjugate(cam.orientation) * fts_float;
 		}
 		if(glfwGetKey(win, GLFW_KEY_D)) {
-			cam.orientation = glm::rotate(cam.orientation,  -1*fts_float, camera::_up);
-			cam.direction = cam.orientation * camera::_direction * glm::conjugate(cam.orientation) * fts_float;
-			cam.up        = cam.orientation * camera::_up * glm::conjugate(cam.orientation) * fts_float;
-			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation) * fts_float;
+			cam.orientation = glm::rotate(
+				cam.orientation,  -1*fts_float, camera::_up
+			);
+			cam.direction = cam.orientation * camera::_direction * 
+				glm::conjugate(cam.orientation) * fts_float;
+			cam.up        = cam.orientation * camera::_up * 
+				glm::conjugate(cam.orientation) * fts_float;
+			cam.right     = cam.orientation * camera::_right  * 
+				glm::conjugate(cam.orientation) * fts_float;
 		}
 		cam.orientation = glm::normalize(cam.orientation);
 		if(glfwGetKey(win, GLFW_KEY_UP)) {
@@ -442,7 +527,9 @@ int main()
 			cam.position += -cam.up*fts_float*100.f;
 		}
 
-		view = glm::lookAt(cam.position, cam.position + cam.direction*10.f, cam.up);
+		view = glm::lookAt(
+			cam.position, cam.position + cam.direction*10.f, cam.up
+		);
 		glUniformMatrix4fv(view_uni, 1, GL_FALSE, glm::value_ptr(view));
 		glUniform3fv(camera_pos_uni, 1, glm::value_ptr(cam.position));
 
@@ -450,8 +537,14 @@ int main()
 		for(unsigned int x=0;x<chunks.size();++x) {
 			for(unsigned int y=0;y<chunks[x].size();++y) {
 				glm::mat4 transform;
-				transform = glm::translate(transform, glm::vec3(chunk::chunk_size)*glm::vec3(chunks[x][y].position));
-				glUniformMatrix4fv(transform_uni, 1, GL_FALSE, glm::value_ptr(transform));
+				transform = glm::translate(
+					transform,
+					glm::vec3(chunk::chunk_size)*
+					glm::vec3(chunks[x][y].position)
+				);
+				glUniformMatrix4fv(
+					transform_uni, 1, GL_FALSE, glm::value_ptr(transform)
+				);
 				glUniform1i(chunk_id_uni, chunks[x][y].tex);
 				glDrawArrays(GL_POINTS, 0, chunk_total);
 			}
