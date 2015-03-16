@@ -1,1 +1,2 @@
 src/ext/* linguist-vendored
+*.sublime-* linguist-vendored 
