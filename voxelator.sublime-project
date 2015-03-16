@@ -12,13 +12,14 @@
 		"sublimeclang_options":
 		[
 			"-I${project_path}/src",
+			"-I${project_path:Makefile}/src",
 			"-stdlib=libc++"
 		],
 		"sublimeclang_debug_options": true,
 		"sublimeclang_additional_language_options":
 		{
 			// For example, you can use "c++": ["-std=c++11"] to enable C++11 features.
-			"c++" : ["-std=c++1y"]
+			"c++" : ["-std=c++14"]
 		}
 	}
 }

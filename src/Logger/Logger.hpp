@@ -25,5 +25,5 @@ public:
 	Logger(StreamType &stream);
 };
 
-#include <Logger/Logger.inl>
+#include "Logger/Logger.inl"
 #endif

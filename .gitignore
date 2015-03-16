@@ -7,3 +7,4 @@
 build/
 voxelator
 *.trace
+*.sublime-workspace

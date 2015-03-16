@@ -1,3 +1,7 @@
+#ifndef __GNUC__
+	#define gnu::
+#endif
+
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
@@ -5,7 +9,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <Logger/Logger.hpp>
+#include "Logger/Logger.hpp"
 #include <thread>
 #include <vector>
 #include <sstream>
@@ -76,9 +80,9 @@ bool process_gl_errors();
 
 int main()
 {
-	std::vector<std::vector<chunk>> chunks(6);
+	std::vector<std::vector<chunk>> chunks(4);
 	for(auto &v : chunks) {
-		v.resize(6);
+		v.resize(5);
 		for(auto &c : v) {
 			c = chunk();
 		}
@@ -100,7 +104,7 @@ int main()
 	wlog.log(L"Initializing GLFW.\n");
 	if(!glfwInit())
 		return cleanup(-1);
-	glfwSetErrorCallback([](int a, const char* b){wlog.log(std::wstring{b, b+std::strlen(b)}+L"\n");});
+	glfwSetErrorCallback([]([[gnu::unused]] int a, const char* b){wlog.log(std::wstring{b, b+std::strlen(b)}+L"\n");});
 	wlog.log(L"Creating window.\n");
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -246,7 +250,6 @@ int main()
 
 	process_gl_errors();
 
-	const int tx=n_vec_sprites.x,ty=n_vec_sprites.y;
 	wlog.log(L"Creating ");
 	wlog.log(std::to_wstring(chunk_total), false);
 	wlog.log(L" blocks.\n", false);
@@ -260,8 +263,8 @@ int main()
 
 	wlog.log(L"Creating Chunk Info Textures.\n");
 
-	for(int x=0;x<chunks.size();++x) {
-		for(int y=0;y<chunks[x].size();++y) {
+	for(unsigned int x=0;x<chunks.size();++x) {
+		for(unsigned int y=0;y<chunks[x].size();++y) {
 			int i = x*chunks[x].size()+y;
 			chunks[x][y].tex = 1+i;
 			chunks[x][y].texnum = GL_TEXTURE1 + i;
@@ -369,7 +372,8 @@ int main()
 	while(!glfwWindowShouldClose(win)) {
 		end = std::chrono::high_resolution_clock::now();
 		long int ft = (std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
-		float fts = ft/1e6f;
+		double fts = static_cast<double>(ft)/1e6L;
+		float fts_float = static_cast<float>(fts);
 		ft_total += ft;
 		++cnt;
 		if(std::chrono::duration_cast<std::chrono::seconds>(end-timetoprint).count() >= 1) {
@@ -383,59 +387,59 @@ int main()
 		start=end;
 
 		if(glfwGetKey(win, GLFW_KEY_Q)) {
-			cam.orientation = glm::rotate(cam.orientation, -1*fts, camera::_direction);
-			cam.direction = cam.orientation * camera::_direction * glm::conjugate(cam.orientation);
-			cam.up        = cam.orientation * camera::_up  * glm::conjugate(cam.orientation);
-			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation);
+			cam.orientation = glm::rotate(cam.orientation, -1*fts_float, camera::_direction);
+			cam.direction = cam.orientation * camera::_direction * glm::conjugate(cam.orientation) * fts_float;
+			cam.up        = cam.orientation * camera::_up  * glm::conjugate(cam.orientation) * fts_float;
+			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation) * fts_float;
 		}
 		if(glfwGetKey(win, GLFW_KEY_E)) {
-			cam.orientation = glm::rotate(cam.orientation,  1*fts, camera::_direction);
-			cam.direction = cam.orientation * camera::_direction  * glm::conjugate(cam.orientation);
-			cam.up        = cam.orientation * camera::_up  * glm::conjugate(cam.orientation);
-			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation);
+			cam.orientation = glm::rotate(cam.orientation,  1*fts_float, camera::_direction);
+			cam.direction = cam.orientation * camera::_direction  * glm::conjugate(cam.orientation) * fts_float;
+			cam.up        = cam.orientation * camera::_up  * glm::conjugate(cam.orientation) * fts_float;
+			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation) * fts_float;
 		}
 		if(glfwGetKey(win, GLFW_KEY_W)) {
-			cam.orientation = glm::rotate(cam.orientation,  1*fts, camera::_right);
-			cam.direction = cam.orientation * camera::_direction  * glm::conjugate(cam.orientation);
-			cam.up        = cam.orientation * camera::_up  * glm::conjugate(cam.orientation);
-			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation);
+			cam.orientation = glm::rotate(cam.orientation,  1*fts_float, camera::_right);
+			cam.direction = cam.orientation * camera::_direction  * glm::conjugate(cam.orientation) * fts_float;
+			cam.up        = cam.orientation * camera::_up  * glm::conjugate(cam.orientation) * fts_float;
+			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation) * fts_float;
 		}
 		if(glfwGetKey(win, GLFW_KEY_S)) {
-			cam.orientation = glm::rotate(cam.orientation,  -1*fts, camera::_right);
-			cam.direction = cam.orientation * camera::_direction  * glm::conjugate(cam.orientation);
-			cam.up        = cam.orientation * camera::_up * glm::conjugate(cam.orientation);
-			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation);
+			cam.orientation = glm::rotate(cam.orientation,  -1*fts_float, camera::_right);
+			cam.direction = cam.orientation * camera::_direction  * glm::conjugate(cam.orientation) * fts_float;
+			cam.up        = cam.orientation * camera::_up * glm::conjugate(cam.orientation) * fts_float;
+			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation) * fts_float;
 		}
 		if(glfwGetKey(win, GLFW_KEY_A)) {
-			cam.orientation = glm::rotate(cam.orientation,  1*fts, camera::_up);
-			cam.direction = cam.orientation * camera::_direction * glm::conjugate(cam.orientation);
-			cam.up        = cam.orientation * camera::_up * glm::conjugate(cam.orientation);
-			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation);
+			cam.orientation = glm::rotate(cam.orientation,  1*fts_float, camera::_up);
+			cam.direction = cam.orientation * camera::_direction * glm::conjugate(cam.orientation) * fts_float;
+			cam.up        = cam.orientation * camera::_up * glm::conjugate(cam.orientation) * fts_float;
+			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation) * fts_float;
 		}
 		if(glfwGetKey(win, GLFW_KEY_D)) {
-			cam.orientation = glm::rotate(cam.orientation,  -1*fts, camera::_up);
-			cam.direction = cam.orientation * camera::_direction * glm::conjugate(cam.orientation);
-			cam.up        = cam.orientation * camera::_up * glm::conjugate(cam.orientation);
-			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation);
+			cam.orientation = glm::rotate(cam.orientation,  -1*fts_float, camera::_up);
+			cam.direction = cam.orientation * camera::_direction * glm::conjugate(cam.orientation) * fts_float;
+			cam.up        = cam.orientation * camera::_up * glm::conjugate(cam.orientation) * fts_float;
+			cam.right     = cam.orientation * camera::_right  * glm::conjugate(cam.orientation) * fts_float;
 		}
 		cam.orientation = glm::normalize(cam.orientation);
 		if(glfwGetKey(win, GLFW_KEY_UP)) {
-		 	cam.position += cam.direction*fts*20.f;
+		 	cam.position += cam.direction*fts_float*100.f;
 		}
 		if(glfwGetKey(win, GLFW_KEY_DOWN)) {
-		 	cam.position += -cam.direction*fts*20.f;
+		 	cam.position += -cam.direction*fts_float*100.f;
 		}
 		if(glfwGetKey(win, GLFW_KEY_RIGHT)) {
-			cam.position += cam.right*fts*20.f;
+			cam.position += cam.right*fts_float*100.f;
 		}
 		if(glfwGetKey(win, GLFW_KEY_LEFT)) {
-			cam.position += -cam.right*fts*20.f;
+			cam.position += -cam.right*fts_float*100.f;
 		}
 		if(glfwGetKey(win, GLFW_KEY_SPACE)) {
-			cam.position += cam.up*fts*20.f;
+			cam.position += cam.up*fts_float*100.f;
 		}
 		if(glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL)) {
-			cam.position += -cam.up*fts*20.f;
+			cam.position += -cam.up*fts_float*100.f;
 		}
 
 		view = glm::lookAt(cam.position, cam.position + cam.direction*10.f, cam.up);
@@ -443,10 +447,8 @@ int main()
 		glUniform3fv(camera_pos_uni, 1, glm::value_ptr(cam.position));
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		int i = 0;
-		for(int x=0;x<chunks.size();++x) {
-			for(int y=0;y<chunks[x].size();++y) {
-				int i = x*chunks[x].size()+y;
+		for(unsigned int x=0;x<chunks.size();++x) {
+			for(unsigned int y=0;y<chunks[x].size();++y) {
 				glm::mat4 transform;
 				transform = glm::translate(transform, glm::vec3(chunk::chunk_size)*glm::vec3(chunks[x][y].position));
 				glUniformMatrix4fv(transform_uni, 1, GL_FALSE, glm::value_ptr(transform));
@@ -461,9 +463,8 @@ int main()
 	}
 
 	delete chunk::offsets;
-	for(int x = 0; x < chunks.size(); ++x) {
-		for(int y = 0; y < chunks[x].size(); ++y) {
-			int i = x*chunks[x].size()+y;
+	for(unsigned int x = 0; x < chunks.size(); ++x) {
+		for(unsigned int y = 0; y < chunks[x].size(); ++y) {
 			glDeleteTextures(1, &(chunks[x][y].texid));
 			delete chunks[x][y].IDs;
 		}

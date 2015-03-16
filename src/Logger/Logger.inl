@@ -1,6 +1,6 @@
 #ifndef LOGGER_IMPL
 #define LOGGER_IMPL
-#include <Logger/Logger.hpp>
+#include "Logger/Logger.hpp"
 #include <iomanip>
 
 template<typename CharT>
