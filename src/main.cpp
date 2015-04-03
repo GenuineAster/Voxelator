@@ -44,8 +44,8 @@ struct camera {
 };
 
 const glm::vec3 camera::_direction = glm::vec3( 1.f, 0.f, 0.f);
-const glm::vec3 camera::_up        = glm::vec3( 0.f, 1.f, 0.f);
-const glm::vec3 camera::_right     = glm::vec3( 0.f, 0.f, 1.f);
+const glm::vec3 camera::_up        = glm::vec3( 0.f, 0.f, -1.f);
+const glm::vec3 camera::_right     = glm::vec3( 0.f, 1.f, 0.f);
 
 struct block{
 	coord_type x, y, z;
@@ -344,6 +344,10 @@ int main()
 	wlog.log(L"Creating and getting camera position uniform data.\n");
 
 	camera cam;
+	cam.up = camera::_up;
+	cam.direction = camera::_direction;
+	cam.right = camera::_right;
+	cam.orientation = glm::quat();
 
 	GLint camera_pos_uni = glGetUniformLocation(program, "cameraPos");
 	glUniform3fv(camera_pos_uni, 1, glm::value_ptr(cam.position));
@@ -431,6 +435,15 @@ int main()
 		).count();
 		if(tslastprint >= 1) {
 			timetoprint = std::chrono::high_resolution_clock::now();
+			wlog.log(L"Direction:\t");
+			wlog.log(cam.direction, false);
+			wlog.log(L"\n", false);
+			wlog.log(L"Up:\t\t");
+			wlog.log(cam.up, false);
+			wlog.log(L"\n", false);
+			wlog.log(L"Right:\t");
+			wlog.log(cam.right, false);
+			wlog.log(L"\n", false);
 			float ft_avg = ft_total/cnt;
 			std::wstring frametimestr = L"FPS avg: " + 
 				std::to_wstring(1e6L/ft_avg) + L"\t" +
@@ -508,27 +521,30 @@ int main()
 				glm::conjugate(cam.orientation) * fts_float;
 		}
 		cam.orientation = glm::normalize(cam.orientation);
+		// cam.direction = glm::normalize(cam.direction);
+		// cam.up = glm::normalize(cam.up);
+		// cam.right = glm::normalize(cam.right);
 		if(glfwGetKey(win, GLFW_KEY_UP)) {
-		 	cam.position += cam.direction*fts_float*100.f;
+		 	cam.position += glm::normalize(cam.direction)*fts_float*100.f;
 		}
 		if(glfwGetKey(win, GLFW_KEY_DOWN)) {
-		 	cam.position += -cam.direction*fts_float*100.f;
+		 	cam.position += -glm::normalize(cam.direction)*fts_float*100.f;
 		}
 		if(glfwGetKey(win, GLFW_KEY_RIGHT)) {
-			cam.position += cam.right*fts_float*100.f;
+			cam.position += glm::normalize(cam.right)*fts_float*100.f;
 		}
 		if(glfwGetKey(win, GLFW_KEY_LEFT)) {
-			cam.position += -cam.right*fts_float*100.f;
+			cam.position += -glm::normalize(cam.right)*fts_float*100.f;
 		}
 		if(glfwGetKey(win, GLFW_KEY_SPACE)) {
-			cam.position += cam.up*fts_float*100.f;
+			cam.position += glm::normalize(cam.up)*fts_float*100.f;
 		}
 		if(glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL)) {
-			cam.position += -cam.up*fts_float*100.f;
+			cam.position += -glm::normalize(cam.up)*fts_float*100.f;
 		}
 
 		view = glm::lookAt(
-			cam.position, cam.position + cam.direction*10.f, cam.up
+			cam.position, cam.position + cam.direction*10.f, cam.up*10.f
 		);
 		glUniformMatrix4fv(view_uni, 1, GL_FALSE, glm::value_ptr(view));
 		glUniform3fv(camera_pos_uni, 1, glm::value_ptr(cam.position));

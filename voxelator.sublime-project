@@ -18,7 +18,6 @@
 		"sublimeclang_debug_options": true,
 		"sublimeclang_additional_language_options":
 		{
-			// For example, you can use "c++": ["-std=c++11"] to enable C++11 features.
 			"c++" : ["-std=c++14"]
 		}
 	}

@@ -2,6 +2,12 @@
 #define LOGGER_HEADER
 #include <chrono>
 #include <ostream>
+#include <glm/glm.hpp>
+
+std::wostream &operator<<(std::wostream &o, glm::vec3 &v)
+{
+	return o<<'('<<v.x<<','<<' '<<v.y<<','<<' '<<v.z<<')';
+}
 
 template<typename CharT>
 class Logger
