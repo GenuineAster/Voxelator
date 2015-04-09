@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <array>
 #include <ctime>
+#include <random>
 #include "ext/stb/stb_image.h"
 
 // Common macro for casting OpenGL buffer offsets
@@ -121,10 +122,6 @@ int main()
 		} else first=false;
 		return block{x,y,z};
 	});
-
-	// I know, this should use some fancy C++11 rand stuff, but this is fine for
-	//  now.
-	std::srand(std::time(NULL));
 
 	using namespace std::literals::chrono_literals;
 
@@ -385,6 +382,10 @@ int main()
 
 	wlog.log(L"Creating Chunk Info Textures.\n");
 
+	std::random_device rd;
+	std::default_random_engine rd_engine(rd());
+	std::uniform_int_distribution<int> dist(1,n_sprites);
+
 	for(unsigned int x=0;x<chunks.size();++x) {
 		for(unsigned int y=0;y<chunks[x].size();++y) {
 			int i = x*chunks[x].size()+y;
@@ -395,7 +396,7 @@ int main()
 			int _x,_y,_z=_y=_x=0;
 			bool first=true;
 			std::generate(chunks[x][y].IDs->begin(), chunks[x][y].IDs->end(), 
-				[&x=_x,&y=_y,&z=_z,n_sprites,&first]{
+				[&x=_x,&y=_y,&z=_z,n_sprites,&first,&rd_engine,&dist]{
 					if(!first){
 						if(x>=chunk_size_x-1){x=0;++y;}
 						else ++x;
@@ -403,7 +404,7 @@ int main()
 					} else first=false;
 					int height = abs(x-(chunk_size_x/2)) + 
 						abs(y-(chunk_size_y/2));
-					return (z>height)?(rand()%(n_sprites-1))+1:0;
+					return (z>height)?dist(rd_engine):0;
 				}
 			);
 			glActiveTexture(chunks[x][y].texnum);
