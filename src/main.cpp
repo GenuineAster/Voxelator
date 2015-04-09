@@ -526,6 +526,10 @@ int main()
 		glVertexAttribPointer(gen_pos_attrib, 3, GL_UNSIGNED_BYTE, GL_FALSE, 3, 0);
 	}
 
+
+	wlog.log(L"Generating chunk buffers.\n");
+	auto start_tf = std::chrono::high_resolution_clock::now();
+
 	GLuint tbo;
 	GLuint tfo;
 	glGenTransformFeedbacks(1, &tfo);
@@ -534,6 +538,7 @@ int main()
 	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, tbo);
 	glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(float)*chunk_total*12*3*components_per_vtx, nullptr, GL_STATIC_DRAW);
 
+
 	GLuint query;
 	glGenQueries(1, &query);
 	for(unsigned int x=0;x<chunks.size();++x) {
@@ -541,8 +546,6 @@ int main()
 			glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, tbo);
 			glEnable(GL_RASTERIZER_DISCARD);
 			glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, tbo);
-
-			wlog.log(L"Beginning transform feedback.\n");
 
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
 			glBindVertexArray(generate_vao);
@@ -554,11 +557,7 @@ int main()
 			glEndTransformFeedback();
 			glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
 
-			wlog.log(L"Done with transform feedback.\n");
-
 			glDisable(GL_RASTERIZER_DISCARD);
-			
-			wlog.log(L"Getting data from transform feedback.\n");
 
 			GLuint primitives;
 			glGetQueryObjectuiv(query, GL_QUERY_RESULT, &primitives);
@@ -575,11 +574,15 @@ int main()
 			chunks[x][y].vertex_count = primitives*3;
 			chunks[x][y].component_count = chunks[x][y].vertex_count*components_per_vtx;
 			glBindBuffer(GL_ARRAY_BUFFER, chunks[x][y].buffer_geometry);
-			wlog.log(L"Primitives rendered in transform feedback: ");
-			wlog.log(primitives, false);
-			wlog.log(L"\n", false);
 		}
 	}
+
+	auto end_tf = std::chrono::high_resolution_clock::now();
+
+	auto time_elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_tf-start_tf);
+
+	wlog.log(L"Done generating chunk buffers.\n");
+	wlog.log(L"Generated "+ std::to_wstring(chunks.size()*chunks[0].size())+L" chunks in "+std::to_wstring(time_elapsed.count())+L"µs.\n");
 
 	glGenVertexArrays(1, &chunk::vtx_array);
 	glBindVertexArray(chunk::vtx_array);
