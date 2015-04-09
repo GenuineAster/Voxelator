@@ -30,6 +30,8 @@
 using coord_type = uint8_t;
 using block_id = uint8_t;
 
+constexpr GLsizei components_per_vtx = 10;
+
 // Specify chunk sizes, chunk_total must be a power of 2.
 constexpr coord_type chunk_size_x=64;
 constexpr coord_type chunk_size_y=64;
@@ -319,17 +321,17 @@ int main()
 	glActiveTexture(GL_TEXTURE0);
 	GLuint spritesheet_tex;
 	glGenTextures(1, &spritesheet_tex);
-	glBindTexture(GL_TEXTURE_2D, spritesheet_tex);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 4);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, spritesheet_tex);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, 4);
 	float col[] = { 0.0f, 1.0f, 0.0f, 1.0f };
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, col);
+	glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, col);
 	int spritesheet_x, spritesheet_y, spritesheet_n;
 	unsigned char *spritesheet_data = stbi_load(
-		"assets/images/spritesheet2.png", &spritesheet_x, &spritesheet_y,
+		"assets/images/spritesheet2a.png", &spritesheet_x, &spritesheet_y,
 		&spritesheet_n, 4
 	);
 	wlog.log(
@@ -337,14 +339,16 @@ int main()
 		L", " + std::to_wstring(spritesheet_y) + L"}, " + 
 		std::to_wstring(spritesheet_n) + L"cpp\n"
 	);
-	glTexImage2D(
-		GL_TEXTURE_2D, 0, GL_RGBA, spritesheet_x, spritesheet_y, 0, 
+	glm::vec2 spritesheet_size(spritesheet_x, spritesheet_y);
+	glm::vec2 sprite_size(16, 16);
+	glm::vec2 sprite_vec = spritesheet_size/sprite_size;
+	GLsizei sprites = sprite_vec.x*sprite_vec.y;
+	glTexImage3D(
+		GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, sprite_size.x, sprite_size.y, sprites, 0, 
 		GL_RGBA, GL_UNSIGNED_BYTE, spritesheet_data
 	);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	stbi_image_free(spritesheet_data);
-	glm::vec2 spritesheet_size(spritesheet_x, spritesheet_y);
-	glm::vec2 sprite_size(16, 16);
 	wlog.log(
 		L"Sprite size: {"+ std::to_wstring(sprite_size.x) + 
 		L"," + std::to_wstring(sprite_size.y) +L"}\n"
@@ -522,7 +526,7 @@ int main()
 	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, tfo);
 	glGenBuffers(1, &tbo);
 	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, tbo);
-	glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(float)*chunk_total*12*3*9, nullptr, GL_STATIC_DRAW);
+	glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(float)*chunk_total*12*3*components_per_vtx, nullptr, GL_STATIC_DRAW);
 
 	GLuint query;
 	glGenQueries(1, &query);
@@ -555,53 +559,30 @@ int main()
 
 			glGenBuffers(1, &chunks[x][y].buffer_geometry);
 			glBindBuffer(GL_COPY_WRITE_BUFFER, chunks[x][y].buffer_geometry);
-			glBufferData(GL_COPY_WRITE_BUFFER, sizeof(float)*primitives*3*9, nullptr, GL_STATIC_DRAW);
+			glBufferData(GL_COPY_WRITE_BUFFER, sizeof(float)*primitives*3*components_per_vtx, nullptr, GL_STATIC_DRAW);
 			glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, 0);
 			glBindBuffer(GL_COPY_READ_BUFFER , tbo);
-			glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sizeof(float)*primitives*3*9);
+			glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sizeof(float)*primitives*3*components_per_vtx);
 			glBindBuffer(GL_COPY_READ_BUFFER , 0);
 			glBindBuffer(GL_COPY_WRITE_BUFFER , 0);
 			chunks[x][y].primitive_count = primitives;
 			chunks[x][y].vertex_count = primitives*3;
-			chunks[x][y].component_count = chunks[x][y].vertex_count*9;
+			chunks[x][y].component_count = chunks[x][y].vertex_count*components_per_vtx;
 			glBindBuffer(GL_ARRAY_BUFFER, chunks[x][y].buffer_geometry);
 			glGenVertexArrays(1, &chunks[x][y].vtx_array);
 			glBindVertexArray(chunks[x][y].vtx_array);
 			wlog.log(L"Setting position vertex attribute data.\n");
 			GLint pos_attrib = glGetAttribLocation(render_program, "pos");
 			glEnableVertexAttribArray(pos_attrib);
-			glVertexAttribPointer(pos_attrib, 4, GL_FLOAT, GL_FALSE, 9*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*0));
+			glVertexAttribPointer(pos_attrib, 4, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*0));
 
 			GLint texcoord_attrib = glGetAttribLocation(render_program, "texcoords");
 			glEnableVertexAttribArray(texcoord_attrib);
-			glVertexAttribPointer(texcoord_attrib, 2, GL_FLOAT, GL_FALSE, 9*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*4));
+			glVertexAttribPointer(texcoord_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*4));
 
 			GLint normal_attrib = glGetAttribLocation(render_program, "normal");
 			glEnableVertexAttribArray(normal_attrib);
-			glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*6));
-
-			// if(false){
-			// 	std::array<GLfloat, 1523724*(3+3+2)> *feedback = new std::array<GLfloat, 1523724*(3+3+2)>;
-			// 	glGetBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback->size()*sizeof(GLfloat), feedback->data());
-			// 	std::ofstream f("/tmp/vtxdata");
-			// 	if(f.good()) {
-			// 		for(unsigned int i=0;i<feedback->size();i+=9)
-			// 			f << "pos: {" 
-			// 				<< std::setw(3) << (*feedback)[i+0] <<  ","
-			// 				<< std::setw(3) << (*feedback)[i+1] <<  ","
-			// 				<< std::setw(3) << (*feedback)[i+2] <<  ","
-			// 				<< std::setw(3) << (*feedback)[i+3] << "},  "
-			// 			  << "texcoords: {"
-			// 				<< std::setw(4) << (*feedback)[i+4] <<  ","
-			// 				<< std::setw(4) << (*feedback)[i+5] << "},  "
-			// 			  << "normal: {"
-			// 				<< std::setw(3) << (*feedback)[i+6] <<  ","
-			// 				<< std::setw(3) << (*feedback)[i+7] <<  ","
-			// 				<< std::setw(3) << (*feedback)[i+8] << "};"
-			// 			  <<std::endl;
-			// 		f.close();
-			// 	}
-			// }
+			glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*7));
 
 			wlog.log(L"Primitives rendered in transform feedback: ");
 			wlog.log(primitives, false);

@@ -3,7 +3,7 @@
 layout(points) in;
 layout(triangle_strip, max_vertices = 24) out;
 
-out vec2 gTexcoords;
+out vec3 gTexcoords;
 out vec3 gNormal;
 // Input texture to get block ID from
 uniform sampler3D IDTex;
@@ -30,11 +30,11 @@ void main() {
 		return;
 
 	// Get the amount of sprites on the x dimension of the sprite texture
-	int numSprites = int(1.f/spriteSizeNormalized.x);
+	// int numSprites = int(1.f/spriteSizeNormalized.x);
 	// Get the sprite's ID
-	ivec2 TexID=ivec2(int(ID)%numSprites, int(ID)/numSprites);
+	// ivec2 TexID=ivec2(int(ID)%numSprites, int(ID)/numSprites);
 	// Get the sprite's base (top left) texcoords
-	vec2 baseTexcoords = spriteSizeNormalized*TexID;
+	// vec2 baseTexcoords = spriteSizeNormalized*TexID;
 
 	// If the block is not touching air, don't render it
 	if(pos_index.z != 0 && getID(pos_index+ivec3(0, 0, -1)) == 0) {
@@ -42,17 +42,17 @@ void main() {
 		gNormal = vec3(0, 0, -1);
 		//   First triangle
 		gl_Position = pos;
-		gTexcoords = baseTexcoords;
+		gTexcoords = vec3(0.f, 0.f, ID);
 		EmitVertex();
 		gl_Position = pos + vec4(1.0, 0.0, 0.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
+		gTexcoords = vec3(1.0, 0.0, ID);
 		EmitVertex();
 		gl_Position = pos + vec4(0.0, 1.0, 0.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+		gTexcoords = vec3(0.0, 1.0, ID);
 		EmitVertex();
 		//   Second triangle
 		gl_Position = pos + vec4(1.0, 1.0, 0.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
+		gTexcoords = vec3(1.0, 1.0, ID);
 		EmitVertex();
 		EndPrimitive();
 	}
@@ -62,17 +62,17 @@ void main() {
 		gNormal = vec3(-1, 0, 0);
 		//   First triangle
 		gl_Position = pos;
-		gTexcoords = baseTexcoords;
+		gTexcoords = vec3(0.f, 0.f, ID);
 		EmitVertex();
 		gl_Position = pos + vec4(0.0, 1.0, 0.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+		gTexcoords = vec3(0.0, 1.0, ID);
 		EmitVertex();
 		gl_Position = pos + vec4(0.0, 0.0, 1.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
+		gTexcoords = vec3(1.0, 0.0, ID);
 		EmitVertex();
 		//   Second triangle
 		gl_Position = pos + vec4(0.0, 1.0, 1.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
+		gTexcoords = vec3(1.0, 1.0, ID);
 		EmitVertex();
 		EndPrimitive();
 	}
@@ -82,17 +82,17 @@ void main() {
 		gNormal = vec3(0, -1, 0);
 		//   First triangle
 		gl_Position = pos;
-		gTexcoords = baseTexcoords;
+		gTexcoords = vec3(0.f, 0.f, ID);
 		EmitVertex();
 		gl_Position = pos + vec4(0.0, 0.0, 1.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+		gTexcoords = vec3(0.0, 1.0, ID);
 		EmitVertex();
 		gl_Position = pos + vec4(1.0, 0.0, 0.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
+		gTexcoords = vec3(1.0, 0.0, ID);
 		EmitVertex();
 		//   Second triangle
 		gl_Position = pos + vec4(1.0, 0.0, 1.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
+		gTexcoords = vec3(1.0, 1.0, ID);
 		EmitVertex();
 		EndPrimitive();
 	}
@@ -102,17 +102,17 @@ void main() {
 		gNormal = vec3(1, 0, 0);
 		//   First triangle
 		gl_Position = pos + vec4(1.0, 1.0, 1.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
+		gTexcoords = vec3(1.0, 1.0, ID);
 		EmitVertex();
 		gl_Position = pos + vec4(1.0, 1.0, 0.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+		gTexcoords = vec3(0.0, 1.0, ID);
 		EmitVertex();
 		gl_Position = pos + vec4(1.0, 0.0, 1.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
+		gTexcoords = vec3(1.0, 0.0, ID);
 		EmitVertex();
 		//   Second triangle
 		gl_Position = pos + vec4(1.0, 0.0, 0.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 0.0);
+		gTexcoords = vec3(0.0, 0.0, ID);
 		EmitVertex();
 		EndPrimitive();
 	}
@@ -122,17 +122,17 @@ void main() {
 		gNormal = vec3(0, 1, 0);
 		//   First triangle
 		gl_Position = pos + vec4(1.0, 1.0, 1.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
+		gTexcoords = vec3(1.0, 1.0, ID);
 		EmitVertex();
 		gl_Position = pos + vec4(0.0, 1.0, 1.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+		gTexcoords = vec3(0.0, 1.0, ID);
 		EmitVertex();
 		gl_Position = pos + vec4(1.0, 1.0, 0.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
+		gTexcoords = vec3(1.0, 0.0, ID);
 		EmitVertex();
 		//   Second triangle
 		gl_Position = pos + vec4(0.0, 1.0, 0.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 0.0);
+		gTexcoords = vec3(0.0, 0.0, ID);
 		EmitVertex();
 		EndPrimitive();
 	}
@@ -142,17 +142,17 @@ void main() {
 		gNormal = vec3(0, 0, 1);
 		//   First triangle
 		gl_Position = pos + vec4(1.0, 1.0, 1.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 1.0);
+		gTexcoords = vec3(1.0, 1.0, ID);
 		EmitVertex();
 		gl_Position = pos + vec4(1.0, 0.0, 1.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 1.0);
+		gTexcoords = vec3(0.0, 1.0, ID);
 		EmitVertex();
 		gl_Position = pos + vec4(0.0, 1.0, 1.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(1.0, 0.0);
+		gTexcoords = vec3(1.0, 0.0, ID);
 		EmitVertex();
 		//   Second triangle
 		gl_Position = pos + vec4(0.0, 0.0, 1.0, 0.0);
-		gTexcoords = baseTexcoords+spriteSizeNormalized*vec2(0.0, 0.0);
+		gTexcoords = vec3(0.0, 0.0, ID);
 		EmitVertex();
 		EndPrimitive();
 	}
