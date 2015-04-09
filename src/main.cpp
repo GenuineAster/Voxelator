@@ -65,12 +65,9 @@ struct block{
 //  (each chunk has the same blocks, with different IDs)
 // It also contains its texture ID and an array of block IDs (which go into the
 //    textures)
-// The vtx_array member is static because all chunks have the same vertex
-//   attributes and this is a huge optimization (1100µs savedfor 144 chunks)
 struct chunk{
 	static const glm::ivec3 chunk_size;
 	static std::array<block, chunk_total> *offsets;
-	static GLuint vtx_array;
 	glm::ivec3 position;
 	std::array<block_id, chunk_total> *IDs;
 	GLenum texnum;
@@ -80,9 +77,8 @@ struct chunk{
 	GLuint primitive_count;
 	GLuint vertex_count;
 	GLuint component_count;
+	GLuint vtx_array;
 };
-
-GLuint chunk::vtx_array;
 
 const glm::ivec3 chunk::chunk_size = glm::ivec3(
 	chunk_size_x, chunk_size_y, chunk_size_z
@@ -574,6 +570,25 @@ int main()
 			chunks[x][y].vertex_count = primitives*3;
 			chunks[x][y].component_count = chunks[x][y].vertex_count*components_per_vtx;
 			glBindBuffer(GL_ARRAY_BUFFER, chunks[x][y].buffer_geometry);
+			glGenVertexArrays(1, &chunks[x][y].vtx_array);
+			glBindVertexArray(chunks[x][y].vtx_array);
+			GLint pos_attrib = glGetAttribLocation(render_program, "pos");
+			if(pos_attrib != -1) {
+				glEnableVertexAttribArray(pos_attrib);
+				glVertexAttribPointer(pos_attrib, 4, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*0));
+			}
+
+			GLint texcoord_attrib = glGetAttribLocation(render_program, "texcoords");
+			if(texcoord_attrib != -1) {
+				glEnableVertexAttribArray(texcoord_attrib);
+				glVertexAttribPointer(texcoord_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*4));
+			}
+
+			GLint normal_attrib = glGetAttribLocation(render_program, "normal");
+			if(normal_attrib != -1) {
+				glEnableVertexAttribArray(normal_attrib);
+				glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*7));
+			}
 		}
 	}
 
@@ -583,29 +598,6 @@ int main()
 
 	wlog.log(L"Done generating chunk buffers.\n");
 	wlog.log(L"Generated "+ std::to_wstring(chunks.size()*chunks[0].size())+L" chunks in "+std::to_wstring(time_elapsed.count())+L"µs.\n");
-
-	glGenVertexArrays(1, &chunk::vtx_array);
-	glBindVertexArray(chunk::vtx_array);
-	wlog.log(L"Setting position vertex attribute data.\n");
-	
-	GLint pos_attrib = glGetAttribLocation(render_program, "pos");
-	if(pos_attrib != -1) {
-		glEnableVertexAttribArray(pos_attrib);
-		glVertexAttribPointer(pos_attrib, 4, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*0));
-	}
-
-	GLint texcoord_attrib = glGetAttribLocation(render_program, "texcoords");
-	if(texcoord_attrib != -1) {
-		glEnableVertexAttribArray(texcoord_attrib);
-		glVertexAttribPointer(texcoord_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*4));
-	}
-
-	GLint normal_attrib = glGetAttribLocation(render_program, "normal");
-	if(normal_attrib != -1) {
-		glEnableVertexAttribArray(normal_attrib);
-		glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*7));
-	}
-
 
 	wlog.log(L"Starting main loop.\n");
 
@@ -740,7 +732,6 @@ int main()
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glBindVertexArray(chunk::vtx_array);
 		for(unsigned int x=0;x<chunks.size();++x) {
 			for(unsigned int y=0;y<chunks[x].size();++y) {
 				glm::mat4 transform;
@@ -752,6 +743,7 @@ int main()
 				glUniformMatrix4fv(
 					model_uni, 1, GL_FALSE, glm::value_ptr(transform)
 				);
+				glBindVertexArray(chunks[x][y].vtx_array);
 				glBindBuffer(GL_ARRAY_BUFFER, chunks[x][y].buffer_geometry);
 				glDrawArrays(GL_TRIANGLES, 0, chunks[x][y].vertex_count);
 			}
