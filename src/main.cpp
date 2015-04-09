@@ -1,3 +1,5 @@
+
+// For gnu::unused attribute
 #ifndef __GNUC__
 	#define gnu::
 #endif
@@ -22,17 +24,21 @@
 #include <ctime>
 #include "ext/stb/stb_image.h"
 
+// Common macro for casting OpenGL buffer offsets
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
 using coord_type = uint8_t;
 using block_id = uint8_t;
 
+// Specify chunk sizes, chunk_total must be a power of 2.
 constexpr coord_type chunk_size_x=64;
 constexpr coord_type chunk_size_y=64;
 constexpr coord_type chunk_size_z=64;
 constexpr uint64_t   chunk_total =chunk_size_x*chunk_size_y*chunk_size_z;
 
+// Camera struct
 struct camera {
+	// Static members for reference data
 	static const glm::vec3 _direction;
 	static const glm::vec3 _up;
 	static const glm::vec3 _right;
@@ -47,11 +53,16 @@ const glm::vec3 camera::_direction = glm::vec3( 1.f, 0.f, 0.f);
 const glm::vec3 camera::_up        = glm::vec3( 0.f, 0.f, -1.f);
 const glm::vec3 camera::_right     = glm::vec3( 0.f, 1.f, 0.f);
 
+// A block just contains its own coordinates
 struct block{
 	coord_type x, y, z;
 	block(int x=0, int y=0, int z=0):x(x),y(y),z(z){}
 };
 
+// A chunk contains a static array of blocks
+//  (each chunk has the same blocks, with different IDs)
+// It also contains its texture ID and an array of block IDs (which go into the
+//    textures)
 struct chunk{
 	static const glm::ivec3 chunk_size;
 	static std::array<block, chunk_total> *offsets;
@@ -60,11 +71,17 @@ struct chunk{
 	GLenum texnum;
 	GLuint texid;
 	GLuint tex;
+	GLuint buffer_geometry;
+	GLuint vtx_array;
+	GLuint primitive_count;
+	GLuint vertex_count;
+	GLuint component_count;
 };
 
 const glm::ivec3 chunk::chunk_size = glm::ivec3(
 	chunk_size_x, chunk_size_y, chunk_size_z
 );
+
 std::array<block, chunk_total> *chunk::offsets = 
 	new std::array<block, chunk_total>;
 
@@ -83,13 +100,15 @@ bool process_gl_errors();
 
 int main()
 {
-	std::vector<std::vector<chunk>> chunks(4);
+	// Generate 4*5 chunks
+	std::vector<std::vector<chunk>> chunks(12);
 	for(auto &v : chunks) {
-		v.resize(5);
+		v.resize(12);
 		for(auto &c : v) {
 			c = chunk();
 		}
 	}
+	// Fill chunk offsets with.. their offsets
 	std::generate(chunk::offsets->begin(), chunk::offsets->end(), []{
 		static uint8_t x,y,z=y=x=0;
 		static bool first=true;
@@ -101,17 +120,25 @@ int main()
 		return block{x,y,z};
 	});
 
+	// I know, this should use some fancy C++11 rand stuff, but this is fine for
+	//  now.
 	std::srand(std::time(NULL));
+
 	using namespace std::literals::chrono_literals;
+
 	wlog.log(L"Starting up.\n");
 	wlog.log(L"Initializing GLFW.\n");
+
 	if(!glfwInit())
 		return cleanup(-1);
+
 	glfwSetErrorCallback(
 		[]([[gnu::unused]] int a, const char* b){
 			wlog.log(std::wstring{b, b+std::strlen(b)}+L"\n");
 		}
 	);
+
+	// Create window with context params etc.
 	wlog.log(L"Creating window.\n");
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -122,6 +149,8 @@ int main()
 	GLFWwindow *win = glfwCreateWindow(
 		640, 480, "Voxelator!", nullptr, nullptr
 	);
+
+	// If window creation fails, exit.
 	if(!win)
 		return cleanup(-2);
 
@@ -153,40 +182,95 @@ int main()
 	process_gl_errors();
 
 	wlog.log(L"Creating Shaders.\n");
-	
-	wlog.log(L"Creating vertex shader.\n");
-	std::string shader_vert_source;
-	if(!readfile("assets/shaders/shader.vert", shader_vert_source)) {
-		return cleanup(-4, L"assets/shaders/shader.vert");
+
+	wlog.log(L"Creating generate vertex shader.\n");
+	std::string shader_generate_vert_source;
+	if(!readfile("assets/shaders/generate/shader.vert", shader_generate_vert_source)) {
+		return cleanup(-4, L"assets/shaders/generate/shader.vert");
 	}
-	GLuint shader_vert = glCreateShader(GL_VERTEX_SHADER);
-	const char* src = shader_vert_source.c_str();
-	glShaderSource(shader_vert, 1, &src, NULL);
-	glCompileShader(shader_vert);
+	GLuint shader_generate_vert = glCreateShader(GL_VERTEX_SHADER);
+	const char* src = shader_generate_vert_source.c_str();
+	glShaderSource(shader_generate_vert, 1, &src, NULL);
+	glCompileShader(shader_generate_vert);
 	GLint status;
-	glGetShaderiv(shader_vert, GL_COMPILE_STATUS, &status);
+	glGetShaderiv(shader_generate_vert, GL_COMPILE_STATUS, &status);
 	char buff[512];
-	glGetShaderInfoLog(shader_vert, 512, NULL, buff);
+	glGetShaderInfoLog(shader_generate_vert, 512, NULL, buff);
 	if(buff[0] && status == GL_TRUE) {
-		wlog.log(L"Vertex shader log:\n");
-		wlog.log(buff);
+		wlog.log(L"Generate vertex shader log:\n");
+		wlog.log(buff, false);
+		wlog.log(L"\n", false);
 	}
 	else if(status != GL_TRUE) {
 		return cleanup(-5, std::wstring(buff[0], buff[511]));
 	}
 	process_gl_errors();
 
-	wlog.log(L"Creating fragment shader.\n");
-	std::string shader_frag_source;
-	if(!readfile("assets/shaders/shader.frag", shader_frag_source)) {
-		return cleanup(-4, L"assets/shaders/shader.frag");
+	wlog.log(L"Creating generate geometry shader.\n");
+	std::string shader_generate_geom_source;
+	if(!readfile("assets/shaders/generate/shader.geom", shader_generate_geom_source)) {
+		return cleanup(-4, L"assets/shaders/generate/shader.geom");
 	}
-	GLuint shader_frag = glCreateShader(GL_FRAGMENT_SHADER);
-	src = shader_frag_source.c_str();
-	glShaderSource(shader_frag, 1, &src, NULL);
-	glCompileShader(shader_frag);
-	glGetShaderiv(shader_frag, GL_COMPILE_STATUS, &status);
-	glGetShaderInfoLog(shader_frag, 512, NULL, buff);
+	GLuint shader_generate_geom = glCreateShader(GL_GEOMETRY_SHADER);
+	src = shader_generate_geom_source.c_str();
+	glShaderSource(shader_generate_geom, 1, &src, NULL);
+	glCompileShader(shader_generate_geom);
+	glGetShaderiv(shader_generate_geom, GL_COMPILE_STATUS, &status);
+	glGetShaderInfoLog(shader_generate_geom, 512, NULL, buff);
+	if(buff[0] && status == GL_TRUE) {
+		wlog.log(L"Generate geometry shader log:\n");
+		wlog.log(buff, false);
+		wlog.log(L"\n", false);
+	}
+	else if(status != GL_TRUE) {
+		wlog.log(buff);
+		return cleanup(-5, std::wstring(buff[0], buff[511]));
+	}
+	process_gl_errors();
+
+	wlog.log(L"Creating and linking generate shader program.\n");
+	GLuint generate_program = glCreateProgram();
+	glAttachShader(generate_program, shader_generate_vert);
+	glAttachShader(generate_program, shader_generate_geom);
+	const char *varyings[] = {"gl_Position", "gTexcoords", "gNormal"};
+	glTransformFeedbackVaryings(generate_program, 3, varyings, GL_INTERLEAVED_ATTRIBS);
+	glLinkProgram(generate_program);
+	glUseProgram(generate_program);
+
+	process_gl_errors();
+	
+	wlog.log(L"Creating render vertex shader.\n");
+	std::string shader_render_vert_source;
+	if(!readfile("assets/shaders/render/shader.vert", shader_render_vert_source)) {
+		return cleanup(-4, L"assets/shaders/render/shader.vert");
+	}
+	GLuint shader_render_vert = glCreateShader(GL_VERTEX_SHADER);
+	src = shader_render_vert_source.c_str();
+	glShaderSource(shader_render_vert, 1, &src, NULL);
+	glCompileShader(shader_render_vert);
+	glGetShaderiv(shader_render_vert, GL_COMPILE_STATUS, &status);
+	glGetShaderInfoLog(shader_render_vert, 512, NULL, buff);
+	if(buff[0] && status == GL_TRUE) {
+		wlog.log(L"Render vertex shader log:\n");
+		wlog.log(buff, false);
+		wlog.log(L"\n", false);
+	}
+	else if(status != GL_TRUE) {
+		return cleanup(-5, std::wstring(buff[0], buff[511]));
+	}
+	process_gl_errors();
+
+	wlog.log(L"Creating render fragment shader.\n");
+	std::string shader_render_frag_source;
+	if(!readfile("assets/shaders/render/shader.frag", shader_render_frag_source)) {
+		return cleanup(-4, L"assets/shaders/render/shader.frag");
+	}
+	GLuint shader_render_frag = glCreateShader(GL_FRAGMENT_SHADER);
+	src = shader_render_frag_source.c_str();
+	glShaderSource(shader_render_frag, 1, &src, NULL);
+	glCompileShader(shader_render_frag);
+	glGetShaderiv(shader_render_frag, GL_COMPILE_STATUS, &status);
+	glGetShaderInfoLog(shader_render_frag, 512, NULL, buff);
 	if(buff[0] && status == GL_TRUE) {
 		wlog.log(L"Fragment shader log:\n");
 		wlog.log(buff, false);
@@ -198,17 +282,17 @@ int main()
 
 	process_gl_errors();
 
-	wlog.log(L"Creating geometry shader.\n");
-	std::string shader_geom_source;
-	if(!readfile("assets/shaders/shader.geom", shader_geom_source)) {
-		return cleanup(-4, L"assets/shaders/shader.geom");
+	wlog.log(L"Creating render geometry shader.\n");
+	std::string shader_render_geom_source;
+	if(!readfile("assets/shaders/render/shader.geom", shader_render_geom_source)) {
+		return cleanup(-4, L"assets/shaders/render/shader.geom");
 	}
-	GLuint shader_geom = glCreateShader(GL_GEOMETRY_SHADER);
-	src = shader_geom_source.c_str();
-	glShaderSource(shader_geom, 1, &src, NULL);
-	glCompileShader(shader_geom);
-	glGetShaderiv(shader_geom, GL_COMPILE_STATUS, &status);
-	glGetShaderInfoLog(shader_geom, 512, NULL, buff);
+	GLuint shader_render_geom = glCreateShader(GL_GEOMETRY_SHADER);
+	src = shader_render_geom_source.c_str();
+	glShaderSource(shader_render_geom, 1, &src, NULL);
+	glCompileShader(shader_render_geom);
+	glGetShaderiv(shader_render_geom, GL_COMPILE_STATUS, &status);
+	glGetShaderInfoLog(shader_render_geom, 512, NULL, buff);
 	if(buff[0] && status == GL_TRUE) {
 		wlog.log(L"Geometry shader log:\n");
 		wlog.log(buff, false);
@@ -220,14 +304,14 @@ int main()
 	}
 	process_gl_errors();
 
-	wlog.log(L"Creating and linking shader program.\n");
-	GLuint program = glCreateProgram();
-	glAttachShader(program, shader_vert);
-	glAttachShader(program, shader_frag);
-	glAttachShader(program, shader_geom);
-	glBindFragDataLocation(program, 0, "outCol");
-	glLinkProgram(program);
-	glUseProgram(program);
+	wlog.log(L"Creating and linking render shader program.\n");
+	GLuint render_program = glCreateProgram();
+	glAttachShader(render_program, shader_render_vert);
+	glAttachShader(render_program, shader_render_frag);
+	// glAttachShader(render_program, shader_render_geom);
+	glBindFragDataLocation(render_program, 0, "outCol");
+	glLinkProgram(render_program);
+	glUseProgram(render_program);
 
 	process_gl_errors();
 
@@ -335,8 +419,10 @@ int main()
 	}
 	process_gl_errors();
 
+	glUseProgram(render_program);
+
 	wlog.log(L"Creating and getting transform uniform data.\n");
-	GLint transform_uni = glGetUniformLocation(program, "transform");
+	GLint model_uni = glGetUniformLocation(render_program, "model");
 
 	process_gl_errors();
 
@@ -349,8 +435,6 @@ int main()
 	cam.right = camera::_right;
 	cam.orientation = glm::quat();
 
-	GLint camera_pos_uni = glGetUniformLocation(program, "cameraPos");
-	glUniform3fv(camera_pos_uni, 1, glm::value_ptr(cam.position));
 	process_gl_errors();
 
 	wlog.log(L"Creating and getting view uniform data.\n");
@@ -359,7 +443,7 @@ int main()
 		cam.direction,
 		cam.up
 	);
-	GLint view_uni = glGetUniformLocation(program, "view");
+	GLint view_uni = glGetUniformLocation(render_program, "view");
 	glUniformMatrix4fv(view_uni, 1, GL_FALSE, glm::value_ptr(view));
 
 	process_gl_errors();
@@ -369,45 +453,20 @@ int main()
 	glm::mat4 projection = glm::perspective(
 		pi/3.f, 640.0f/480.0f, 0.01f, 1000.0f
 	);
-	GLint projection_uni = glGetUniformLocation(program, "projection");
+	GLint projection_uni = glGetUniformLocation(render_program, "projection");
 	glUniformMatrix4fv(projection_uni, 1, GL_FALSE, glm::value_ptr(projection));
 
 	process_gl_errors();
 
 	wlog.log(L"Creating and setting normalized sprite size uniform data.\n");
 	GLint sprite_size_uni = glGetUniformLocation(
-		program, "spriteSizeNormalized"
+		render_program, "spriteSizeNormalized"
 	);
 	glUniform2fv(sprite_size_uni, 1, glm::value_ptr(sprite_size_normalized));
 
 	process_gl_errors();
 
-	wlog.log(L"Creating and setting spritesheet texture uniform data.\n");
-	GLint spritesheet_uni = glGetUniformLocation(program, "spritesheet");
-	glUniform1i(spritesheet_uni, 0);
-
-	process_gl_errors();
-
-	wlog.log(L"Creating and setting block chunk texture uniform data.\n");
-	GLint chunk_id_uni = glGetUniformLocation(program, "IDTex");
-	glUniform1i(chunk_id_uni, 1);
-
-	process_gl_errors();
-
-	wlog.log(L"Creating and setting block chunk size uniform data.\n");
-	GLint chunk_size_uni = glGetUniformLocation(program, "chunkSize");
-	glUniform3fv(chunk_size_uni, 1, glm::value_ptr(
-		glm::vec3(chunk_size_x,chunk_size_y,chunk_size_z))
-	);
-
-	process_gl_errors();
-
-	wlog.log(L"Setting position vertex attribute data.\n");
-	GLint pos_attrib = glGetAttribLocation(program, "pos");
-	glEnableVertexAttribArray(pos_attrib);
-	glVertexAttribPointer(pos_attrib, 3, GL_UNSIGNED_BYTE, GL_FALSE, 3, 0);
-
-	process_gl_errors();
+	glUseProgram(render_program);
 
 	std::chrono::high_resolution_clock::time_point start, end, timetoprint;
 	timetoprint = end = start = std::chrono::high_resolution_clock::now();
@@ -419,7 +478,142 @@ int main()
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
+	wlog.log(L"Setting up transform feedback.\n");
+
+	glUseProgram(generate_program);
+
+	wlog.log(L"Creating and setting block chunk texture uniform data.\n");
+	GLint chunk_id_uni = glGetUniformLocation(generate_program, "IDTex");
+	glUniform1i(chunk_id_uni, 1);
+
+	wlog.log(L"Creating and setting spritesheet texture uniform data.\n");
+	GLint spritesheet_uni = glGetUniformLocation(generate_program, "spritesheet");
+	glUniform1i(spritesheet_uni, 0);
+
+	process_gl_errors();
+
+	wlog.log(L"Creating and setting block chunk size uniform data.\n");
+	GLint chunk_size_uni = glGetUniformLocation(generate_program, "chunkSize");
+	glUniform3fv(chunk_size_uni, 1, glm::value_ptr(
+		glm::vec3(chunk_size_x,chunk_size_y,chunk_size_z))
+	);
+
+	process_gl_errors();
+
+	GLint gen_sprite_size_uni = glGetUniformLocation(
+		generate_program, "spriteSizeNormalized"
+	);
+	glUniform2fv(gen_sprite_size_uni, 1, glm::value_ptr(sprite_size_normalized));
+
+	process_gl_errors();
+
+	GLuint generate_vao;
+	glGenVertexArrays(1, &generate_vao);
+	glBindVertexArray(generate_vao);
+
+	wlog.log(L"Setting position vertex attribute data.\n");
+	GLint gen_pos_attrib = glGetAttribLocation(generate_program, "pos");
+	glEnableVertexAttribArray(gen_pos_attrib);
+	glVertexAttribPointer(gen_pos_attrib, 3, GL_UNSIGNED_BYTE, GL_FALSE, 3, 0);
+
+	GLuint tbo;
+	GLuint tfo;
+	glGenTransformFeedbacks(1, &tfo);
+	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, tfo);
+	glGenBuffers(1, &tbo);
+	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, tbo);
+	glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(float)*chunk_total*12*3*9, nullptr, GL_STATIC_DRAW);
+
+	GLuint query;
+	glGenQueries(1, &query);
+	for(unsigned int x=0;x<chunks.size();++x) {
+		for(unsigned int y=0;y<chunks[x].size();++y) {
+			glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, tbo);
+			glEnable(GL_RASTERIZER_DISCARD);
+			glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, tbo);
+
+			wlog.log(L"Beginning transform feedback.\n");
+
+			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			glBindVertexArray(generate_vao);
+
+			glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, query);
+			glBeginTransformFeedback(GL_TRIANGLES);
+			glUniform1i(chunk_id_uni, chunks[x][y].tex);
+			glDrawArrays(GL_POINTS, 0, chunk_total);
+			glEndTransformFeedback();
+			glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
+
+			wlog.log(L"Done with transform feedback.\n");
+
+			glDisable(GL_RASTERIZER_DISCARD);
+			
+			wlog.log(L"Getting data from transform feedback.\n");
+
+			GLuint primitives;
+			glGetQueryObjectuiv(query, GL_QUERY_RESULT, &primitives);
+
+			glGenBuffers(1, &chunks[x][y].buffer_geometry);
+			glBindBuffer(GL_COPY_WRITE_BUFFER, chunks[x][y].buffer_geometry);
+			glBufferData(GL_COPY_WRITE_BUFFER, sizeof(float)*primitives*3*9, nullptr, GL_STATIC_DRAW);
+			glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, 0);
+			glBindBuffer(GL_COPY_READ_BUFFER , tbo);
+			glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sizeof(float)*primitives*3*9);
+			glBindBuffer(GL_COPY_READ_BUFFER , 0);
+			glBindBuffer(GL_COPY_WRITE_BUFFER , 0);
+			chunks[x][y].primitive_count = primitives;
+			chunks[x][y].vertex_count = primitives*3;
+			chunks[x][y].component_count = chunks[x][y].vertex_count*9;
+			glBindBuffer(GL_ARRAY_BUFFER, chunks[x][y].buffer_geometry);
+			glGenVertexArrays(1, &chunks[x][y].vtx_array);
+			glBindVertexArray(chunks[x][y].vtx_array);
+			wlog.log(L"Setting position vertex attribute data.\n");
+			GLint pos_attrib = glGetAttribLocation(render_program, "pos");
+			glEnableVertexAttribArray(pos_attrib);
+			glVertexAttribPointer(pos_attrib, 4, GL_FLOAT, GL_FALSE, 9*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*0));
+
+			GLint texcoord_attrib = glGetAttribLocation(render_program, "texcoords");
+			glEnableVertexAttribArray(texcoord_attrib);
+			glVertexAttribPointer(texcoord_attrib, 2, GL_FLOAT, GL_FALSE, 9*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*4));
+
+			GLint normal_attrib = glGetAttribLocation(render_program, "normal");
+			glEnableVertexAttribArray(normal_attrib);
+			glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, 9*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*6));
+
+			// if(false){
+			// 	std::array<GLfloat, 1523724*(3+3+2)> *feedback = new std::array<GLfloat, 1523724*(3+3+2)>;
+			// 	glGetBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback->size()*sizeof(GLfloat), feedback->data());
+			// 	std::ofstream f("/tmp/vtxdata");
+			// 	if(f.good()) {
+			// 		for(unsigned int i=0;i<feedback->size();i+=9)
+			// 			f << "pos: {" 
+			// 				<< std::setw(3) << (*feedback)[i+0] <<  ","
+			// 				<< std::setw(3) << (*feedback)[i+1] <<  ","
+			// 				<< std::setw(3) << (*feedback)[i+2] <<  ","
+			// 				<< std::setw(3) << (*feedback)[i+3] << "},  "
+			// 			  << "texcoords: {"
+			// 				<< std::setw(4) << (*feedback)[i+4] <<  ","
+			// 				<< std::setw(4) << (*feedback)[i+5] << "},  "
+			// 			  << "normal: {"
+			// 				<< std::setw(3) << (*feedback)[i+6] <<  ","
+			// 				<< std::setw(3) << (*feedback)[i+7] <<  ","
+			// 				<< std::setw(3) << (*feedback)[i+8] << "};"
+			// 			  <<std::endl;
+			// 		f.close();
+			// 	}
+			// }
+
+			wlog.log(L"Primitives rendered in transform feedback: ");
+			wlog.log(primitives, false);
+			wlog.log(L"\n", false);
+		}
+	}
 	wlog.log(L"Starting main loop.\n");
+
+	glUseProgram(render_program);
+
+	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, 0);
+	// glBindBuffer(GL_ARRAY_BUFFER, tbo);
 
 	while(!glfwWindowShouldClose(win)) {
 		end = std::chrono::high_resolution_clock::now();
@@ -521,9 +715,7 @@ int main()
 				glm::conjugate(cam.orientation) * fts_float;
 		}
 		cam.orientation = glm::normalize(cam.orientation);
-		// cam.direction = glm::normalize(cam.direction);
-		// cam.up = glm::normalize(cam.up);
-		// cam.right = glm::normalize(cam.right);
+
 		if(glfwGetKey(win, GLFW_KEY_UP)) {
 		 	cam.position += glm::normalize(cam.direction)*fts_float*100.f;
 		}
@@ -547,9 +739,12 @@ int main()
 			cam.position, cam.position + cam.direction*10.f, cam.up*10.f
 		);
 		glUniformMatrix4fv(view_uni, 1, GL_FALSE, glm::value_ptr(view));
-		glUniform3fv(camera_pos_uni, 1, glm::value_ptr(cam.position));
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// glUniform1i(chunk_id_uni, chunks[0][0].tex);
+		// glDrawArrays(GL_TRIANGLES, 0, primitives);
+		// glDrawTransformFeedback(GL_TRIANGLES, tfo);
 		for(unsigned int x=0;x<chunks.size();++x) {
 			for(unsigned int y=0;y<chunks[x].size();++y) {
 				glm::mat4 transform;
@@ -559,16 +754,18 @@ int main()
 					glm::vec3(chunks[x][y].position)
 				);
 				glUniformMatrix4fv(
-					transform_uni, 1, GL_FALSE, glm::value_ptr(transform)
+					model_uni, 1, GL_FALSE, glm::value_ptr(transform)
 				);
-				glUniform1i(chunk_id_uni, chunks[x][y].tex);
-				glDrawArrays(GL_POINTS, 0, chunk_total);
+				// glUniform1i(chunk_id_uni, chunks[x][y].tex);
+				// glDrawArrays(GL_POINTS, 0, chunk_total);
+				glBindVertexArray(chunks[x][y].vtx_array);
+				glBindBuffer(GL_ARRAY_BUFFER, chunks[x][y].buffer_geometry);
+				glDrawArrays(GL_TRIANGLES, 0, chunks[x][y].vertex_count);
 			}
 		}
 		glfwSwapBuffers(win);
 		glfwPollEvents();
 		process_gl_errors();
-		// std::this_thread::sleep_for(16ms);
 	}
 
 	delete chunk::offsets;
@@ -578,13 +775,19 @@ int main()
 			delete chunks[x][y].IDs;
 		}
 	}
-	glfwDestroyWindow(win);
 
-	glDeleteShader(shader_vert);
-	glDeleteShader(shader_frag);
-	glDeleteShader(shader_geom);
-	glDeleteProgram(program);
+	glDeleteShader(shader_render_vert);
+	glDeleteShader(shader_render_frag);
+	glDeleteShader(shader_render_geom);
+	glDeleteShader(shader_generate_geom);
+	glDeleteShader(shader_generate_vert);
+	glDeleteProgram(render_program);
+	glDeleteProgram(generate_program);
 	glDeleteBuffers(1, &vbo);
+	glDeleteBuffers(1, &tbo);
+	glDeleteVertexArrays(1, &vao);
+	glDeleteTransformFeedbacks(1, &tfo);
+	glfwDestroyWindow(win);
 
 	return cleanup(0);
 }
