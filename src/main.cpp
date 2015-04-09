@@ -65,20 +65,24 @@ struct block{
 //  (each chunk has the same blocks, with different IDs)
 // It also contains its texture ID and an array of block IDs (which go into the
 //    textures)
+// The vtx_array member is static because all chunks have the same vertex
+//   attributes and this is a huge optimization (1100µs savedfor 144 chunks)
 struct chunk{
 	static const glm::ivec3 chunk_size;
 	static std::array<block, chunk_total> *offsets;
+	static GLuint vtx_array;
 	glm::ivec3 position;
 	std::array<block_id, chunk_total> *IDs;
 	GLenum texnum;
 	GLuint texid;
 	GLuint tex;
 	GLuint buffer_geometry;
-	GLuint vtx_array;
 	GLuint primitive_count;
 	GLuint vertex_count;
 	GLuint component_count;
 };
+
+GLuint chunk::vtx_array;
 
 const glm::ivec3 chunk::chunk_size = glm::ivec3(
 	chunk_size_x, chunk_size_y, chunk_size_z
@@ -517,8 +521,10 @@ int main()
 
 	wlog.log(L"Setting position vertex attribute data.\n");
 	GLint gen_pos_attrib = glGetAttribLocation(generate_program, "pos");
-	glEnableVertexAttribArray(gen_pos_attrib);
-	glVertexAttribPointer(gen_pos_attrib, 3, GL_UNSIGNED_BYTE, GL_FALSE, 3, 0);
+	if(gen_pos_attrib != -1) {
+		glEnableVertexAttribArray(gen_pos_attrib);
+		glVertexAttribPointer(gen_pos_attrib, 3, GL_UNSIGNED_BYTE, GL_FALSE, 3, 0);
+	}
 
 	GLuint tbo;
 	GLuint tfo;
@@ -569,32 +575,40 @@ int main()
 			chunks[x][y].vertex_count = primitives*3;
 			chunks[x][y].component_count = chunks[x][y].vertex_count*components_per_vtx;
 			glBindBuffer(GL_ARRAY_BUFFER, chunks[x][y].buffer_geometry);
-			glGenVertexArrays(1, &chunks[x][y].vtx_array);
-			glBindVertexArray(chunks[x][y].vtx_array);
-			wlog.log(L"Setting position vertex attribute data.\n");
-			GLint pos_attrib = glGetAttribLocation(render_program, "pos");
-			glEnableVertexAttribArray(pos_attrib);
-			glVertexAttribPointer(pos_attrib, 4, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*0));
-
-			GLint texcoord_attrib = glGetAttribLocation(render_program, "texcoords");
-			glEnableVertexAttribArray(texcoord_attrib);
-			glVertexAttribPointer(texcoord_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*4));
-
-			GLint normal_attrib = glGetAttribLocation(render_program, "normal");
-			glEnableVertexAttribArray(normal_attrib);
-			glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*7));
-
 			wlog.log(L"Primitives rendered in transform feedback: ");
 			wlog.log(primitives, false);
 			wlog.log(L"\n", false);
 		}
 	}
+
+	glGenVertexArrays(1, &chunk::vtx_array);
+	glBindVertexArray(chunk::vtx_array);
+	wlog.log(L"Setting position vertex attribute data.\n");
+	
+	GLint pos_attrib = glGetAttribLocation(render_program, "pos");
+	if(pos_attrib != -1) {
+		glEnableVertexAttribArray(pos_attrib);
+		glVertexAttribPointer(pos_attrib, 4, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*0));
+	}
+
+	GLint texcoord_attrib = glGetAttribLocation(render_program, "texcoords");
+	if(texcoord_attrib != -1) {
+		glEnableVertexAttribArray(texcoord_attrib);
+		glVertexAttribPointer(texcoord_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*4));
+	}
+
+	GLint normal_attrib = glGetAttribLocation(render_program, "normal");
+	if(normal_attrib != -1) {
+		glEnableVertexAttribArray(normal_attrib);
+		glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*7));
+	}
+
+
 	wlog.log(L"Starting main loop.\n");
 
 	glUseProgram(render_program);
 
 	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, 0);
-	// glBindBuffer(GL_ARRAY_BUFFER, tbo);
 
 	while(!glfwWindowShouldClose(win)) {
 		end = std::chrono::high_resolution_clock::now();
@@ -723,9 +737,7 @@ int main()
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// glUniform1i(chunk_id_uni, chunks[0][0].tex);
-		// glDrawArrays(GL_TRIANGLES, 0, primitives);
-		// glDrawTransformFeedback(GL_TRIANGLES, tfo);
+		glBindVertexArray(chunk::vtx_array);
 		for(unsigned int x=0;x<chunks.size();++x) {
 			for(unsigned int y=0;y<chunks[x].size();++y) {
 				glm::mat4 transform;
@@ -737,9 +749,6 @@ int main()
 				glUniformMatrix4fv(
 					model_uni, 1, GL_FALSE, glm::value_ptr(transform)
 				);
-				// glUniform1i(chunk_id_uni, chunks[x][y].tex);
-				// glDrawArrays(GL_POINTS, 0, chunk_total);
-				glBindVertexArray(chunks[x][y].vtx_array);
 				glBindBuffer(GL_ARRAY_BUFFER, chunks[x][y].buffer_geometry);
 				glDrawArrays(GL_TRIANGLES, 0, chunks[x][y].vertex_count);
 			}
