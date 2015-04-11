@@ -663,6 +663,28 @@ int main()
 
 	wlog.log(L"Starting main loop.\n");
 
+	glfwSetKeyCallback(win, [](GLFWwindow*, int key, int, int action, int){
+		switch(action) {
+			case GLFW_PRESS: {
+				switch(key) {
+
+				}
+			} break;
+			case GLFW_RELEASE: {
+				switch(key) {
+					case GLFW_KEY_F: {
+						static bool wireframe=false;
+						wireframe = !wireframe;
+						if(wireframe)
+							glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+						else
+							glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+					} break;
+				}
+			} break;
+		}
+	});
+
 	glUseProgram(render_program);
 
 	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, 0);
