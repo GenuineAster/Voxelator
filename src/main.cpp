@@ -33,7 +33,11 @@ using block_id = uint8_t;
 
 constexpr GLsizei components_per_vtx = 10;
 
-// Specify chunk sizes, chunk_total must be a power of 2.
+//Specify amount of chunks
+constexpr uint32_t   chunks_x=12;
+constexpr uint32_t   chunks_y=12;
+constexpr uint32_t   chunks_z=0; // Unused for now
+// Specify chunk sizes, chunk_size_*  and chunk_total must be a power of 2.
 constexpr coord_type chunk_size_x=64;
 constexpr coord_type chunk_size_y=64;
 constexpr coord_type chunk_size_z=64;
@@ -103,10 +107,10 @@ bool process_gl_errors();
 
 int main()
 {
-	// Generate 4*5 chunks
-	std::vector<std::vector<chunk>> chunks(12);
+	// Generate chunk_x*chunk_y chunks
+	std::vector<std::vector<chunk>> chunks(chunks_x);
 	for(auto &v : chunks) {
-		v.resize(12);
+		v.resize(chunks_y);
 		for(auto &c : v) {
 			c = chunk();
 		}
@@ -382,6 +386,29 @@ int main()
 
 	wlog.log(L"Creating Chunk Info Textures.\n");
 
+	chunk empty_chunk;
+	empty_chunk.buffer_geometry=-1;
+	empty_chunk.component_count=-1;
+	empty_chunk.primitive_count=-1;
+	empty_chunk.vertex_count=-1;
+	empty_chunk.vtx_array=-1;
+	empty_chunk.IDs = new std::array<block_id, chunk_total>;
+	empty_chunk.IDs->fill(0);
+	empty_chunk.texnum = GL_TEXTURE0;
+	glActiveTexture(empty_chunk.texnum);
+	glGenTextures(1, &empty_chunk.texid);
+	glBindTexture(GL_TEXTURE_3D, empty_chunk.texid);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, 0);
+	glTexParameterfv(GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, col);
+	glTexImage3D(
+		GL_TEXTURE_3D, 0, GL_RED, chunk_size_x, chunk_size_y, 
+		chunk_size_z, 0, GL_RED, GL_UNSIGNED_BYTE, 
+		empty_chunk.IDs->data()
+	);
+	glGenerateMipmap(GL_TEXTURE_3D);
+
 	std::random_device rd;
 	std::default_random_engine rd_engine(rd());
 	std::uniform_int_distribution<int> dist(1,n_sprites);
@@ -491,6 +518,12 @@ int main()
 	GLint chunk_id_uni = glGetUniformLocation(generate_program, "IDTex");
 	glUniform1i(chunk_id_uni, 1);
 
+	wlog.log(L"Creating and setting block chunk neighbors uniform data.\n");
+	GLint neighbor_id_uni = glGetUniformLocation(generate_program, "neighbors");
+
+	wlog.log(L"Creating and setting block chunk is bottom uniform data.\n");
+	GLint chunk_is_bottom_id_uni = glGetUniformLocation(generate_program, "chunkIsBottom");
+
 	wlog.log(L"Creating and setting spritesheet texture uniform data.\n");
 	GLint spritesheet_uni = glGetUniformLocation(generate_program, "spritesheet");
 	glUniform1i(spritesheet_uni, 0);
@@ -535,6 +568,9 @@ int main()
 	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, tbo);
 	glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(float)*chunk_total*12*3*components_per_vtx, nullptr, GL_STATIC_DRAW);
 
+	uint64_t chunk_total_primitives = 0;
+	uint64_t chunk_total_vertices = 0;
+	uint64_t chunk_total_components = 0;
 
 	GLuint query;
 	glGenQueries(1, &query);
@@ -547,10 +583,36 @@ int main()
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
 			glBindVertexArray(generate_vao);
 
+			// Get neighboring chunks, or set to empty_chunk if none
+			GLint neighbor_tex[6];
+			if(x<chunks_x-1)
+				neighbor_tex[0]=chunks[x+1][y].tex;
+			else
+				neighbor_tex[0]=empty_chunk.tex;
+			if(y<chunks_y-1)
+				neighbor_tex[1]=chunks[x][y+1].tex;
+			else
+				neighbor_tex[1]=empty_chunk.tex;
+			neighbor_tex[2]=empty_chunk.tex;
+			if(x)
+				neighbor_tex[3]=chunks[x-1][y].tex;
+			else
+				neighbor_tex[3]=empty_chunk.tex;
+			if(y)
+				neighbor_tex[4]=chunks[x][y-1].tex;
+			else
+				neighbor_tex[4]=empty_chunk.tex;
+			neighbor_tex[5]=empty_chunk.tex;
+
+			glUniform1i(chunk_id_uni, chunks[x][y].tex);
+			//This is always true for now, as we only have a world height
+			//  of 1 chunk
+			glUniform1i(chunk_is_bottom_id_uni, true);
+			glUniform1iv(neighbor_id_uni, 6, neighbor_tex);
+
 			glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, query);
 			glBeginTransformFeedback(GL_TRIANGLES);
-			glUniform1i(chunk_id_uni, chunks[x][y].tex);
-			glDrawArrays(GL_POINTS, 0, chunk_total);
+				glDrawArrays(GL_POINTS, 0, chunk_total);
 			glEndTransformFeedback();
 			glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
 
@@ -570,6 +632,16 @@ int main()
 			chunks[x][y].primitive_count = primitives;
 			chunks[x][y].vertex_count = primitives*3;
 			chunks[x][y].component_count = chunks[x][y].vertex_count*components_per_vtx;
+			chunk_total_primitives += chunks[x][y].primitive_count;
+			chunk_total_vertices += chunks[x][y].vertex_count;
+			chunk_total_components += chunks[x][y].component_count;
+			wlog.log(
+				L"Chunk["+std::to_wstring(x)+L"]["+std::to_wstring(y)+L"] buffer size: "
+				+ std::to_wstring(chunks[x][y].component_count*sizeof(float))
+				+ L"; total: "
+				+ std::to_wstring(chunk_total_components*sizeof(float))
+				+ L"\n"
+			);
 			glBindBuffer(GL_ARRAY_BUFFER, chunks[x][y].buffer_geometry);
 			glGenVertexArrays(1, &chunks[x][y].vtx_array);
 			glBindVertexArray(chunks[x][y].vtx_array);
@@ -599,6 +671,17 @@ int main()
 
 	wlog.log(L"Done generating chunk buffers.\n");
 	wlog.log(L"Generated "+ std::to_wstring(chunks.size()*chunks[0].size())+L" chunks in "+std::to_wstring(time_elapsed.count())+L"µs.\n");
+	wlog.log(
+		L"Chunk buffers total: {primitives: "
+		+ std::to_wstring(chunk_total_primitives)
+		+ L", vertices: "
+		+ std::to_wstring(chunk_total_vertices)
+		+ L", components: "
+		+ std::to_wstring(chunk_total_components)
+		+ L", bytes: "
+		+ std::to_wstring(chunk_total_components*sizeof(float))
+		+ L"}.\n"
+	);
 
 	wlog.log(L"Starting main loop.\n");
 

@@ -8,3 +8,7 @@ build/
 voxelator
 *.trace
 *.sublime-workspace
+*~
+massif.out*
+callgrind.out*
+cachegrind.out*

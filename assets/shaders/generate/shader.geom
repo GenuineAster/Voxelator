@@ -7,7 +7,14 @@ out vec3 gTexcoords;
 out vec3 gNormal;
 // Input texture to get block ID from
 uniform sampler3D IDTex;
-// Size of chunks (unused for now)
+// Textures for chunks surrounding the chunk we're generating
+//   0: +x, 1: +y, 2: +z, 3: -x, 4: -y, 5: -z
+uniform sampler3D neighbors[6];
+// Whether the chunk is on the bottom of the world
+//  If it is, we don't need to render the bottom of the chunk,
+//    as it will never get seen.
+uniform bool chunkIsBottom=false;
+// Size of chunks
 uniform vec3 chunkSize;
 // Normalized sprite size (used as multiplier)
 uniform vec2 spriteSizeNormalized;
@@ -15,6 +22,10 @@ uniform vec2 spriteSizeNormalized;
 // Helper function that gets the block ID from the ID texture
 int getID(ivec3 pos) {
 	return int(texelFetch(IDTex, pos, 0).r*255);
+}
+
+int getID(sampler3D chunk, ivec3 pos) {
+	return int(texelFetch(chunk, pos, 0).r*255);
 }
 
 void main() {
@@ -29,15 +40,14 @@ void main() {
 	if(ID==0)
 		return;
 
-	// Get the amount of sprites on the x dimension of the sprite texture
-	// int numSprites = int(1.f/spriteSizeNormalized.x);
-	// Get the sprite's ID
-	// ivec2 TexID=ivec2(int(ID)%numSprites, int(ID)/numSprites);
-	// Get the sprite's base (top left) texcoords
-	// vec2 baseTexcoords = spriteSizeNormalized*TexID;
+	bool border_block, generate_face;
 
+	///////// +z
 	// If the block is not touching air, don't render it
-	if(pos_index.z != 0 && getID(pos_index+ivec3(0, 0, -1)) == 0) {
+	border_block = pos_index.z==0;
+	generate_face = border_block&&(getID(neighbors[2], ivec3(pos_index.xy, chunkSize.z-1))==0);
+	generate_face = generate_face ||(!border_block&&(getID(pos_index+ivec3(0, 0, -1)) == 0));
+	if(generate_face) {
 		// Draw first face
 		gNormal = vec3(0, 0, -1);
 		//   First triangle
@@ -57,7 +67,11 @@ void main() {
 		EndPrimitive();
 	}
 
-	if(pos_index.x != 0 && getID(pos_index+ivec3(-1, 0, 0)) == 0) {
+	///////// -x
+	border_block = pos_index.x==0;
+	generate_face = border_block&&(getID(neighbors[3], ivec3(chunkSize.x-1, pos_index.yz))==0);
+	generate_face = generate_face ||(!border_block&&(getID(pos_index+ivec3(-1, 0, 0)) == 0));
+	if(generate_face) {
 		// Draw second face
 		gNormal = vec3(-1, 0, 0);
 		//   First triangle
@@ -77,7 +91,11 @@ void main() {
 		EndPrimitive();
 	}
 
-	if(pos_index.y != 0 && getID(pos_index+ivec3(0, -1, 0)) == 0) {
+	/////////// -y
+	border_block = pos_index.y==0;
+	generate_face = border_block&&(getID(neighbors[4], ivec3(pos_index.x, chunkSize.y-1, pos_index.z))==0);
+	generate_face = generate_face ||(!border_block&&(getID(pos_index+ivec3(0, -1, 0)) == 0));
+	if(generate_face) {
 		// Draw third face
 		gNormal = vec3(0, -1, 0);
 		//   First triangle
@@ -97,7 +115,11 @@ void main() {
 		EndPrimitive();
 	}
 
-	if(pos_index.x != chunkSize.x-1 && getID(pos_index+ivec3(1, 0, 0)) == 0) {
+	//////// +x
+	border_block = pos_index.x==chunkSize.x-1;
+	generate_face = border_block&&(getID(neighbors[0], ivec3(0, pos_index.yz))==0);
+	generate_face = generate_face ||(!border_block&&(getID(pos_index+ivec3(1, 0, 0)) == 0));
+	if(generate_face) {
 		// Draw fourth face
 		gNormal = vec3(1, 0, 0);
 		//   First triangle
@@ -117,7 +139,11 @@ void main() {
 		EndPrimitive();
 	}
 
-	if(pos_index.y != chunkSize.y-1 && getID(pos_index+ivec3(0, 1, 0)) == 0) {
+	////// +y
+	border_block = pos_index.y==chunkSize.y-1;
+	generate_face = border_block&&(getID(neighbors[1], ivec3(pos_index.x, 0, pos_index.z))==0);
+	generate_face = generate_face ||(!border_block&&(getID(pos_index+ivec3(0, 1, 0)) == 0));
+	if(generate_face) {
 		// Draw fifth face
 		gNormal = vec3(0, 1, 0);
 		//   First triangle
@@ -137,7 +163,11 @@ void main() {
 		EndPrimitive();
 	}
 
-	if(pos_index.z != chunkSize.z-1 && getID(pos_index+ivec3(0, 0, 1)) == 0) {
+	//////// -z
+	border_block = pos_index.z==chunkSize.z-1;
+	generate_face = border_block&&!chunkIsBottom&&(getID(neighbors[5], ivec3(pos_index.xy, 0))==0);
+	generate_face = generate_face ||(!border_block&&(getID(pos_index+ivec3(0, 0, 1)) == 0));
+	if(generate_face) {
 		// Draw sixth face
 		gNormal = vec3(0, 0, 1);
 		//   First triangle
