@@ -666,6 +666,9 @@ int main()
 	glUseProgram(render_program);
 
 	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, 0);
+	glEnable(GL_CULL_FACE);
+	glFrontFace(GL_CW);
+	glCullFace(GL_BACK);
 
 	while(!glfwWindowShouldClose(win)) {
 		end = std::chrono::high_resolution_clock::now();
