@@ -285,33 +285,10 @@ int main()
 
 	process_gl_errors();
 
-	wlog.log(L"Creating render geometry shader.\n");
-	std::string shader_render_geom_source;
-	if(!readfile("assets/shaders/render/shader.geom", shader_render_geom_source)) {
-		return cleanup(-4, L"assets/shaders/render/shader.geom");
-	}
-	GLuint shader_render_geom = glCreateShader(GL_GEOMETRY_SHADER);
-	src = shader_render_geom_source.c_str();
-	glShaderSource(shader_render_geom, 1, &src, NULL);
-	glCompileShader(shader_render_geom);
-	glGetShaderiv(shader_render_geom, GL_COMPILE_STATUS, &status);
-	glGetShaderInfoLog(shader_render_geom, 512, NULL, buff);
-	if(buff[0] && status == GL_TRUE) {
-		wlog.log(L"Geometry shader log:\n");
-		wlog.log(buff, false);
-		wlog.log(L"\n", false);
-	}
-	else if(status != GL_TRUE) {
-		wlog.log(buff);
-		return cleanup(-5, std::wstring(buff[0], buff[511]));
-	}
-	process_gl_errors();
-
 	wlog.log(L"Creating and linking render shader program.\n");
 	GLuint render_program = glCreateProgram();
 	glAttachShader(render_program, shader_render_vert);
 	glAttachShader(render_program, shader_render_frag);
-	// glAttachShader(render_program, shader_render_geom);
 	glBindFragDataLocation(render_program, 0, "outCol");
 	glLinkProgram(render_program);
 	glUseProgram(render_program);
@@ -394,6 +371,7 @@ int main()
 	empty_chunk.vtx_array=-1;
 	empty_chunk.IDs = new std::array<block_id, chunk_total>;
 	empty_chunk.IDs->fill(0);
+	empty_chunk.tex = 0;
 	empty_chunk.texnum = GL_TEXTURE0;
 	glActiveTexture(empty_chunk.texnum);
 	glGenTextures(1, &empty_chunk.texid);
@@ -417,7 +395,7 @@ int main()
 		for(unsigned int y=0;y<chunks[x].size();++y) {
 			int i = x*chunks[x].size()+y;
 			chunks[x][y].tex = 1+i;
-			chunks[x][y].texnum = GL_TEXTURE1 + i;
+			chunks[x][y].texnum = GL_TEXTURE0 + 1 + i;
 			chunks[x][y].IDs = new std::array<block_id, chunk_total>;
 			chunks[x][y].position = glm::vec3(x, y, 0.f);
 			int _x,_y,_z=_y=_x=0;
@@ -847,7 +825,6 @@ int main()
 
 	glDeleteShader(shader_render_vert);
 	glDeleteShader(shader_render_frag);
-	glDeleteShader(shader_render_geom);
 	glDeleteShader(shader_generate_geom);
 	glDeleteShader(shader_generate_vert);
 	glDeleteProgram(render_program);
