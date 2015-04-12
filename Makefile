@@ -1,4 +1,5 @@
-CXXFLAGS = -std=c++14 -Werror -Wunused -Wall -Wextra -Wpedantic -I src/ -O3 -march=native -msse4 -mfpmath=sse -ffast-math -g
+CXXFLAGS = -std=c++14 -Wunused -Wall -Wextra -Wpedantic -I src/ -O3 -march=native -msse4 -mfpmath=sse -ffast-math -g
+# CXXFLAGS = -std=c++14 -Wunused -Wall -Wextra -Wpedantic -I src/ -g
 LDFLAGS  = -lglfw -lGLEW -lGL
 
 voxelator: src/main.o src/ext/stb/stb_image_pre.o

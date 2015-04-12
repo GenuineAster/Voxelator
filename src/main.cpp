@@ -28,6 +28,11 @@
 // Common macro for casting OpenGL buffer offsets
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
+constexpr float win_size_x = 960;
+constexpr float win_size_y = 540;
+constexpr float render_size_x = 3840;
+constexpr float render_size_y = 2160;
+
 using coord_type = uint8_t;
 using block_id = uint8_t;
 
@@ -150,7 +155,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 	GLFWwindow *win = glfwCreateWindow(
-		640, 480, "Voxelator!", nullptr, nullptr
+		win_size_x, win_size_y, "Voxelator!", nullptr, nullptr
 	);
 
 	// If window creation fails, exit.
@@ -295,6 +300,59 @@ int main()
 
 	process_gl_errors();
 
+	wlog.log(L"Creating display vertex shader.\n");
+	std::string shader_display_vert_source;
+	if(!readfile("assets/shaders/display/shader.vert", shader_display_vert_source)) {
+		return cleanup(-4, L"assets/shaders/display/shader.vert");
+	}
+	GLuint shader_display_vert = glCreateShader(GL_VERTEX_SHADER);
+	src = shader_display_vert_source.c_str();
+	glShaderSource(shader_display_vert, 1, &src, NULL);
+	glCompileShader(shader_display_vert);
+	glGetShaderiv(shader_display_vert, GL_COMPILE_STATUS, &status);
+	glGetShaderInfoLog(shader_display_vert, 512, NULL, buff);
+	if(buff[0] && status == GL_TRUE) {
+		wlog.log(L"display vertex shader log:\n");
+		wlog.log(buff, false);
+		wlog.log(L"\n", false);
+	}
+	else if(status != GL_TRUE) {
+		return cleanup(-5, std::wstring(buff[0], buff[511]));
+	}
+	process_gl_errors();
+
+	wlog.log(L"Creating display fragment shader.\n");
+	std::string shader_display_frag_source;
+	if(!readfile("assets/shaders/display/shader.frag", shader_display_frag_source)) {
+		return cleanup(-4, L"assets/shaders/display/shader.frag");
+	}
+	GLuint shader_display_frag = glCreateShader(GL_FRAGMENT_SHADER);
+	src = shader_display_frag_source.c_str();
+	glShaderSource(shader_display_frag, 1, &src, NULL);
+	glCompileShader(shader_display_frag);
+	glGetShaderiv(shader_display_frag, GL_COMPILE_STATUS, &status);
+	glGetShaderInfoLog(shader_display_frag, 512, NULL, buff);
+	if(buff[0] && status == GL_TRUE) {
+		wlog.log(L"Fragment shader log:\n");
+		wlog.log(buff, false);
+		wlog.log(L"\n", false);
+	}
+	else if(status != GL_TRUE) {
+		return cleanup(-5, std::wstring(buff[0], buff[511]));
+	}
+
+	process_gl_errors();
+
+	wlog.log(L"Creating and linking display shader program.\n");
+	GLuint display_program = glCreateProgram();
+	glAttachShader(display_program, shader_display_vert);
+	glAttachShader(display_program, shader_display_frag);
+	glBindFragDataLocation(display_program, 0, "color");
+	glLinkProgram(display_program);
+	glUseProgram(display_program);
+
+	process_gl_errors();
+
 	wlog.log(L"Loading spritesheet.\n");
 	glActiveTexture(GL_TEXTURE0);
 	GLuint spritesheet_tex;
@@ -431,6 +489,8 @@ int main()
 
 	glUseProgram(render_program);
 
+	glViewport(0.f, 0.f, win_size_x, win_size_y);
+
 	wlog.log(L"Creating and getting transform uniform data.\n");
 	GLint model_uni = glGetUniformLocation(render_program, "model");
 
@@ -461,7 +521,7 @@ int main()
 
 	wlog.log(L"Creating and getting projection uniform data.\n");
 	glm::mat4 projection = glm::perspective(
-		pi/3.f, 640.0f/480.0f, 0.01f, 1000.0f
+		pi/3.f, render_size_x/render_size_y, 0.01f, 1000.0f
 	);
 	GLint projection_uni = glGetUniformLocation(render_program, "projection");
 	glUniformMatrix4fv(projection_uni, 1, GL_FALSE, glm::value_ptr(projection));
@@ -643,6 +703,13 @@ int main()
 		}
 	}
 
+	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, 0);
+	glDeleteTransformFeedbacks(1, &tfo);
+	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, 0);
+	glDeleteBuffers(1, &tbo);
+	glBindVertexArray(0);
+	glDeleteVertexArrays(1, &generate_vao);
+
 	auto end_tf = std::chrono::high_resolution_clock::now();
 
 	auto time_elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_tf-start_tf);
@@ -685,12 +752,59 @@ int main()
 		}
 	});
 
-	glUseProgram(render_program);
-
 	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, 0);
-	glEnable(GL_CULL_FACE);
-	glFrontFace(GL_CW);
-	glCullFace(GL_BACK);
+	// glEnable(GL_CULL_FACE);
+	// glFrontFace(GL_CW);
+	// glCullFace(GL_BACK);
+
+	GLuint framebuffer;
+	glGenFramebuffers(1, &framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	GLuint framebuffer_texture;
+	glGenTextures(1, &framebuffer_texture);
+	glActiveTexture(GL_TEXTURE0+3);
+	glBindTexture(GL_TEXTURE_2D, framebuffer_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, render_size_x, render_size_y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer_texture, 0);
+	GLuint renderbuffer;
+	glGenRenderbuffers(1, &renderbuffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, render_size_x, render_size_y);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, renderbuffer);
+
+	float fb_vertices[] = {
+		// Coords  Texcoords
+		-1.f, -1.f,   0.f, 0.f,
+		 1.f, -1.f,   1.f, 0.f,
+		-1.f,  1.f,   0.f, 1.f,
+		-1.f,  1.f,   0.f, 1.f,
+		 1.f, -1.f,   1.f, 0.f,
+		 1.f,  1.f,   1.f, 1.f,
+	};
+	GLuint fb_vbo, fb_vao;
+	glGenVertexArrays(1, &fb_vao);
+	glBindVertexArray(fb_vao);
+	glGenBuffers(1, &fb_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, fb_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(fb_vertices), fb_vertices, GL_STATIC_DRAW);
+
+	GLint framebuffer_uni = glGetUniformLocation(display_program, "framebuffer");
+
+	GLint fb_vao_pos_attrib = glGetAttribLocation(display_program, "pos");
+	if(fb_vao_pos_attrib != -1) {
+		glEnableVertexAttribArray(fb_vao_pos_attrib);
+		glVertexAttribPointer(fb_vao_pos_attrib, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), 0);
+	}
+
+	GLint fb_vao_texcoord_attrib = glGetAttribLocation(display_program, "texcoords");
+	if(fb_vao_texcoord_attrib != -1) {
+		glEnableVertexAttribArray(fb_vao_texcoord_attrib);
+		glVertexAttribPointer(fb_vao_texcoord_attrib, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), BUFFER_OFFSET(sizeof(float)*2));
+	}
+
+	glUseProgram(render_program);
 
 	while(!glfwWindowShouldClose(win)) {
 		end = std::chrono::high_resolution_clock::now();
@@ -812,11 +926,16 @@ int main()
 			cam.position += -glm::normalize(cam.up)*fts_float*100.f;
 		}
 
+		glUseProgram(render_program);
+
 		view = glm::lookAt(
 			cam.position, cam.position + cam.direction*10.f, cam.up*10.f
 		);
+
 		glUniformMatrix4fv(view_uni, 1, GL_FALSE, glm::value_ptr(view));
 
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+		glViewport(0.f, 0.f, render_size_x, render_size_y);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		for(unsigned int x=0;x<chunks.size();++x) {
@@ -835,19 +954,41 @@ int main()
 				glDrawArrays(GL_TRIANGLES, 0, chunks[x][y].vertex_count);
 			}
 		}
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glDisable(GL_DEPTH_TEST);
+		glUseProgram(display_program);
+		glViewport(0.f, 0.f, win_size_x, win_size_y);
+
+		glBindVertexArray(fb_vao);
+		glBindBuffer(GL_ARRAY_BUFFER, fb_vbo);
+		
+		glUniform1i(framebuffer_uni, 3);
+		
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		
+
+		glEnable(GL_DEPTH_TEST);
 		glfwSwapBuffers(win);
 		glfwPollEvents();
 		process_gl_errors();
 	}
 
 	delete chunk::offsets;
+	glDeleteTextures(1, &empty_chunk.texid);
+	delete empty_chunk.IDs;
 	for(unsigned int x = 0; x < chunks.size(); ++x) {
 		for(unsigned int y = 0; y < chunks[x].size(); ++y) {
 			glDeleteTextures(1, &(chunks[x][y].texid));
+			glDeleteBuffers(1, &(chunks[x][y].buffer_geometry));
+			glDeleteVertexArrays(1, &(chunks[x][y].vtx_array));
 			delete chunks[x][y].IDs;
 		}
 	}
 
+	// glDeleteFramebuffers(1, &framebuffer);
 	glDeleteShader(shader_render_vert);
 	glDeleteShader(shader_render_frag);
 	glDeleteShader(shader_generate_geom);
@@ -855,9 +996,7 @@ int main()
 	glDeleteProgram(render_program);
 	glDeleteProgram(generate_program);
 	glDeleteBuffers(1, &vbo);
-	glDeleteBuffers(1, &tbo);
 	glDeleteVertexArrays(1, &vao);
-	glDeleteTransformFeedbacks(1, &tfo);
 	glfwDestroyWindow(win);
 
 	return cleanup(0);
