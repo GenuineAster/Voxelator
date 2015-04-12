@@ -163,7 +163,8 @@ int main()
 	if(!win)
 		return cleanup(-2);
 
-	int win_size_x, win_size_y;
+	int win_size[2];
+	int &win_size_x=win_size[0], &win_size_y=win_size[1];
 	glfwGetWindowSize(win, &win_size_x, &win_size_y);
 
 	glfwMakeContextCurrent(win);
@@ -795,6 +796,7 @@ int main()
 	glBufferData(GL_ARRAY_BUFFER, sizeof(fb_vertices), fb_vertices, GL_STATIC_DRAW);
 
 	GLint framebuffer_uni = glGetUniformLocation(display_program, "framebuffer");
+	GLint viewport_size_uni = glGetUniformLocation(display_program, "viewport_size");
 
 	GLint fb_vao_pos_attrib = glGetAttribLocation(display_program, "pos");
 	if(fb_vao_pos_attrib != -1) {
