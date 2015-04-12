@@ -972,8 +972,15 @@ int main()
 		
 		glUniform1i(framebuffer_uni, 3);
 		
+		GLint poly_mode;
+
+		glGetIntegerv(GL_POLYGON_MODE, &poly_mode);
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-		
+
+		glPolygonMode(GL_FRONT_AND_BACK, poly_mode);
 
 		glEnable(GL_DEPTH_TEST);
 		glfwSwapBuffers(win);
