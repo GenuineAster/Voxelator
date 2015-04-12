@@ -757,9 +757,9 @@ int main()
 	});
 
 	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, 0);
-	// glEnable(GL_CULL_FACE);
-	// glFrontFace(GL_CW);
-	// glCullFace(GL_BACK);
+	glEnable(GL_CULL_FACE);
+	glFrontFace(GL_CW);
+	glCullFace(GL_BACK);
 
 	GLuint framebuffer;
 	glGenFramebuffers(1, &framebuffer);
@@ -780,12 +780,12 @@ int main()
 
 	float fb_vertices[] = {
 		// Coords  Texcoords
+		-1.f,  1.f,   0.f, 1.f,
+		 1.f, -1.f,   1.f, 0.f,
 		-1.f, -1.f,   0.f, 0.f,
-		 1.f, -1.f,   1.f, 0.f,
-		-1.f,  1.f,   0.f, 1.f,
-		-1.f,  1.f,   0.f, 1.f,
-		 1.f, -1.f,   1.f, 0.f,
 		 1.f,  1.f,   1.f, 1.f,
+		 1.f, -1.f,   1.f, 0.f,
+		-1.f,  1.f,   0.f, 1.f,
 	};
 	GLuint fb_vbo, fb_vao;
 	glGenVertexArrays(1, &fb_vao);
