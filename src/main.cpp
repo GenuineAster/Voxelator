@@ -28,10 +28,11 @@
 // Common macro for casting OpenGL buffer offsets
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
-constexpr float win_size_x = 960;
-constexpr float win_size_y = 540;
-constexpr float render_size_x = 3840;
-constexpr float render_size_y = 2160;
+constexpr float init_win_size_x = 960.f;
+constexpr float init_win_size_y = 540.f;
+ 
+constexpr float render_size_x = 3840.f;
+constexpr float render_size_y = 2160.f;
 
 using coord_type = uint8_t;
 using block_id = uint8_t;
@@ -155,12 +156,15 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 	GLFWwindow *win = glfwCreateWindow(
-		win_size_x, win_size_y, "Voxelator!", nullptr, nullptr
+		init_win_size_x, init_win_size_y, "Voxelator!", nullptr, nullptr
 	);
 
 	// If window creation fails, exit.
 	if(!win)
 		return cleanup(-2);
+
+	int win_size_x, win_size_y;
+	glfwGetWindowSize(win, &win_size_x, &win_size_y);
 
 	glfwMakeContextCurrent(win);
 
@@ -960,6 +964,7 @@ int main()
 
 		glDisable(GL_DEPTH_TEST);
 		glUseProgram(display_program);
+		glfwGetWindowSize(win, &win_size_x, &win_size_y);
 		glViewport(0.f, 0.f, win_size_x, win_size_y);
 
 		glBindVertexArray(fb_vao);
