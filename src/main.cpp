@@ -483,8 +483,8 @@ int main()
 			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, 0);
 			glTexParameterfv(GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, col);
 			glTexImage3D(
-				GL_TEXTURE_3D, 0, GL_RED, chunk_size_x, chunk_size_y, 
-				chunk_size_z, 0, GL_RED, GL_UNSIGNED_BYTE, 
+				GL_TEXTURE_3D, 0, GL_R8UI, chunk_size_x, chunk_size_y, 
+				chunk_size_z, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, 
 				chunks[x][y].IDs->data()
 			);
 			glGenerateMipmap(GL_TEXTURE_3D);

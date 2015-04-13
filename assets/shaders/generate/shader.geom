@@ -6,10 +6,10 @@ layout(triangle_strip, max_vertices = 24) out;
 out vec3 gTexcoords;
 out vec3 gNormal;
 // Input texture to get block ID from
-uniform sampler3D IDTex;
+uniform isampler3D IDTex;
 // Textures for chunks surrounding the chunk we're generating
 //   0: +x, 1: +y, 2: +z, 3: -x, 4: -y, 5: -z
-uniform sampler3D neighbors[6];
+uniform isampler3D neighbors[6];
 // Whether the chunk is on the bottom of the world
 //  If it is, we don't need to render the bottom of the chunk,
 //    as it will never get seen.
@@ -21,11 +21,11 @@ uniform vec2 spriteSizeNormalized;
 
 // Helper function that gets the block ID from the ID texture
 int getID(ivec3 pos) {
-	return int(texelFetch(IDTex, pos, 0).r*255);
+	return texelFetch(IDTex, pos, 0).r;
 }
 
-int getID(sampler3D chunk, ivec3 pos) {
-	return int(texelFetch(chunk, pos, 0).r*255);
+int getID(isampler3D chunk, ivec3 pos) {
+	return texelFetch(chunk, pos, 0).r;
 }
 
 void main() {
