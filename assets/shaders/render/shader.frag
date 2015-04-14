@@ -1,18 +1,17 @@
 #version 430
 
-//layout(early_fragment_tests) in;
-
 out vec4 outCol;
 in vec3 vTexcoords;
 in vec3 vNormal;
-in float dist;
+in vec3 vPosition;
 
 uniform sampler2DArray spritesheet;
 
-const float fog_dis = 128.f;
-const float fog_len = 512.f;
-
 void main()
 {
+	vec3 toSurface = normalize(-vPosition);
+	float brightness = dot(vNormal, toSurface);
+	brightness = clamp(brightness, 0.0, 1.0);
 	outCol = texture(spritesheet, vTexcoords);
+	outCol = vec4(brightness * vec3(1.0) * outCol.rgb, outCol.a);
 }

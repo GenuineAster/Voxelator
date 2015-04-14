@@ -8,10 +8,12 @@ uniform mat4 projection;
 uniform mat4 model;
 out vec3 vNormal;
 out vec3 vTexcoords;
+out vec3 vPosition;
 
 void main()
 {
-	vNormal = normal;
+	vNormal = normalize(transpose(inverse(mat3(projection*view*model)))*normal);
 	vTexcoords = texcoords;
 	gl_Position = (projection*view*model)*vec4(pos, 1.0);
+	vPosition = vec3(gl_Position);
 }
