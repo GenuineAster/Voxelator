@@ -1,17 +1,20 @@
 #version 430
 
-out vec4 outCol;
-in vec3 vTexcoords;
+layout(depth_unchanged) out float gl_FragDepth;
+layout(early_fragment_tests) in;
+
 in vec3 vNormal;
 in vec3 vPosition;
+in vec3 vTexcoords;
+out vec4 outNormal;
+out vec4 outPosition;
+out vec4 outColor;
 
 uniform sampler2DArray spritesheet;
 
 void main()
 {
-	vec3 toSurface = normalize(-vPosition);
-	float brightness = dot(vNormal, toSurface);
-	brightness = clamp(brightness, 0.0, 1.0);
-	outCol = texture(spritesheet, vTexcoords);
-	outCol = vec4(brightness * vec3(1.0) * outCol.rgb, outCol.a);
+	outNormal = vec4(vNormal, 1.0);
+	outPosition = vec4(vPosition, 1.0);
+	outColor = texture(spritesheet, vTexcoords);
 }

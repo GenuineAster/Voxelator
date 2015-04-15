@@ -299,9 +299,64 @@ int main()
 	GLuint render_program = glCreateProgram();
 	glAttachShader(render_program, shader_render_vert);
 	glAttachShader(render_program, shader_render_frag);
-	glBindFragDataLocation(render_program, 0, "outCol");
+	glBindFragDataLocation(render_program, 0, "outColor");
+	glBindFragDataLocation(render_program, 1, "outNormal");
+	glBindFragDataLocation(render_program, 2, "outPosition");
 	glLinkProgram(render_program);
 	glUseProgram(render_program);
+
+	process_gl_errors();
+
+	wlog.log(L"Creating lighting vertex shader.\n");
+	std::string shader_lighting_vert_source;
+	if(!readfile("assets/shaders/lighting/shader.vert", shader_lighting_vert_source)) {
+		return cleanup(-4, L"assets/shaders/lighting/shader.vert");
+	}
+	GLuint shader_lighting_vert = glCreateShader(GL_VERTEX_SHADER);
+	src = shader_lighting_vert_source.c_str();
+	glShaderSource(shader_lighting_vert, 1, &src, NULL);
+	glCompileShader(shader_lighting_vert);
+	glGetShaderiv(shader_lighting_vert, GL_COMPILE_STATUS, &status);
+	glGetShaderInfoLog(shader_lighting_vert, 512, NULL, buff);
+	if(buff[0] && status == GL_TRUE) {
+		wlog.log(L"lighting vertex shader log:\n");
+		wlog.log(buff, false);
+		wlog.log(L"\n", false);
+	}
+	else if(status != GL_TRUE) {
+		return cleanup(-5, std::wstring(buff[0], buff[511]));
+	}
+	process_gl_errors();
+
+	wlog.log(L"Creating lighting fragment shader.\n");
+	std::string shader_lighting_frag_source;
+	if(!readfile("assets/shaders/lighting/shader.frag", shader_lighting_frag_source)) {
+		return cleanup(-4, L"assets/shaders/lighting/shader.frag");
+	}
+	GLuint shader_lighting_frag = glCreateShader(GL_FRAGMENT_SHADER);
+	src = shader_lighting_frag_source.c_str();
+	glShaderSource(shader_lighting_frag, 1, &src, NULL);
+	glCompileShader(shader_lighting_frag);
+	glGetShaderiv(shader_lighting_frag, GL_COMPILE_STATUS, &status);
+	glGetShaderInfoLog(shader_lighting_frag, 512, NULL, buff);
+	if(buff[0] && status == GL_TRUE) {
+		wlog.log(L"Fragment shader log:\n");
+		wlog.log(buff, false);
+		wlog.log(L"\n", false);
+	}
+	else if(status != GL_TRUE) {
+		return cleanup(-5, std::wstring(buff[0], buff[511]));
+	}
+
+	process_gl_errors();
+
+	wlog.log(L"Creating and linking lighting shader program.\n");
+	GLuint lighting_program = glCreateProgram();
+	glAttachShader(lighting_program, shader_lighting_vert);
+	glAttachShader(lighting_program, shader_lighting_frag);
+	glBindFragDataLocation(lighting_program, 0, "outCol");
+	glLinkProgram(lighting_program);
+	glUseProgram(lighting_program);
 
 	process_gl_errors();
 
@@ -487,7 +542,6 @@ int main()
 				chunk_size_z, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, 
 				chunks[x][y].IDs->data()
 			);
-			glGenerateMipmap(GL_TEXTURE_3D);
 		}
 	}
 	process_gl_errors();
@@ -526,32 +580,21 @@ int main()
 
 	wlog.log(L"Creating and getting projection uniform data.\n");
 	glm::mat4 projection = glm::perspective(
-		pi/3.f, render_size_x/render_size_y, 0.01f, 1000.0f
+		pi/3.f, render_size_x/render_size_y, 0.01f, 3000.0f
 	);
 	GLint projection_uni = glGetUniformLocation(render_program, "projection");
 	glUniformMatrix4fv(projection_uni, 1, GL_FALSE, glm::value_ptr(projection));
 
-	process_gl_errors();
-
-	wlog.log(L"Creating and setting normalized sprite size uniform data.\n");
-	GLint sprite_size_uni = glGetUniformLocation(
-		render_program, "spriteSizeNormalized"
-	);
-	glUniform2fv(sprite_size_uni, 1, glm::value_ptr(sprite_size_normalized));
+	GLint render_spritesheet_uni = glGetUniformLocation(render_program, "spritesheet");
 
 	process_gl_errors();
 
-	glUseProgram(render_program);
+	glUseProgram(lighting_program);
 
-	std::chrono::high_resolution_clock::time_point start, end, timetoprint;
-	timetoprint = end = start = std::chrono::high_resolution_clock::now();
-
-	glFlush();
-
-	long long cnt=0;
-	long double ft_total=0.f;
-
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	GLint light_color_uni = glGetUniformLocation(lighting_program, "colorTex");
+	GLint light_normals_uni = glGetUniformLocation(lighting_program, "normalsTex");
+	GLint light_positions_uni = glGetUniformLocation(lighting_program, "positionsTex");
+	GLint light_depth_uni = glGetUniformLocation(lighting_program, "depthTex");
 
 	wlog.log(L"Setting up transform feedback.\n");
 
@@ -567,9 +610,6 @@ int main()
 	wlog.log(L"Creating and setting block chunk is bottom uniform data.\n");
 	GLint chunk_is_bottom_id_uni = glGetUniformLocation(generate_program, "chunkIsBottom");
 
-	wlog.log(L"Creating and setting spritesheet texture uniform data.\n");
-	GLint spritesheet_uni = glGetUniformLocation(generate_program, "spritesheet");
-	glUniform1i(spritesheet_uni, 0);
 
 	process_gl_errors();
 
@@ -578,13 +618,6 @@ int main()
 	glUniform3fv(chunk_size_uni, 1, glm::value_ptr(
 		glm::vec3(chunk_size_x,chunk_size_y,chunk_size_z))
 	);
-
-	process_gl_errors();
-
-	GLint gen_sprite_size_uni = glGetUniformLocation(
-		generate_program, "spriteSizeNormalized"
-	);
-	glUniform2fv(gen_sprite_size_uni, 1, glm::value_ptr(sprite_size_normalized));
 
 	process_gl_errors();
 
@@ -614,6 +647,8 @@ int main()
 	uint64_t chunk_total_primitives = 0;
 	uint64_t chunk_total_vertices = 0;
 	uint64_t chunk_total_components = 0;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	GLuint query;
 	glGenQueries(1, &query);
@@ -762,22 +797,61 @@ int main()
 	glFrontFace(GL_CW);
 	glCullFace(GL_BACK);
 
-	GLuint framebuffer;
-	glGenFramebuffers(1, &framebuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-	GLuint framebuffer_texture;
-	glGenTextures(1, &framebuffer_texture);
-	glActiveTexture(GL_TEXTURE0+3);
-	glBindTexture(GL_TEXTURE_2D, framebuffer_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, render_size_x, render_size_y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	GLuint framebuffer_render;
+	glGenFramebuffers(1, &framebuffer_render);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_render);
+
+	GLuint framebuffer_render_color_texture;
+	glGenTextures(1, &framebuffer_render_color_texture);
+	glActiveTexture(GL_TEXTURE0+4);
+	glBindTexture(GL_TEXTURE_2D, framebuffer_render_color_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, render_size_x, render_size_y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer_texture, 0);
-	GLuint renderbuffer;
-	glGenRenderbuffers(1, &renderbuffer);
-	glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, render_size_x, render_size_y);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, renderbuffer);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer_render_color_texture, 0);
+
+	GLuint framebuffer_render_normals_texture;
+	glGenTextures(1, &framebuffer_render_normals_texture);
+	glActiveTexture(GL_TEXTURE0+5);
+	glBindTexture(GL_TEXTURE_2D, framebuffer_render_normals_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, render_size_x, render_size_y, 0, GL_RG, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, framebuffer_render_normals_texture, 0);
+	
+	GLuint framebuffer_render_positions_texture;
+	glGenTextures(1, &framebuffer_render_positions_texture);
+	glActiveTexture(GL_TEXTURE0+6);
+	glBindTexture(GL_TEXTURE_2D, framebuffer_render_positions_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, render_size_x, render_size_y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, framebuffer_render_positions_texture, 0);
+
+	GLuint framebuffer_render_depth_texture;
+	glGenTextures(1, &framebuffer_render_depth_texture);
+	glActiveTexture(GL_TEXTURE0+7);
+	glBindTexture(GL_TEXTURE_2D, framebuffer_render_depth_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, render_size_x, render_size_y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, framebuffer_render_depth_texture, 0);
+
+	GLenum drawbuffers[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
+	glDrawBuffers(3, drawbuffers);
+
+	GLuint framebuffer_display;
+	glGenFramebuffers(1, &framebuffer_display);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_display);
+
+	GLuint framebuffer_display_color_texture;
+	glGenTextures(1, &framebuffer_display_color_texture);
+	glActiveTexture(GL_TEXTURE0+8);
+	glBindTexture(GL_TEXTURE_2D, framebuffer_display_color_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, render_size_x, render_size_y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer_display_color_texture, 0);
 
 	float fb_vertices[] = {
 		// Coords  Texcoords
@@ -811,6 +885,16 @@ int main()
 	}
 
 	glUseProgram(render_program);
+
+	std::chrono::high_resolution_clock::time_point start, end, timetoprint;
+	timetoprint = end = start = std::chrono::high_resolution_clock::now();
+
+	glFlush();
+
+	long long cnt=0;
+	long double ft_total=0.f;
+
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	while(!glfwWindowShouldClose(win)) {
 		end = std::chrono::high_resolution_clock::now();
@@ -939,8 +1023,10 @@ int main()
 		);
 
 		glUniformMatrix4fv(view_uni, 1, GL_FALSE, glm::value_ptr(view));
+		glUniform1i(render_spritesheet_uni, 0);
 
-		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_render);
 		glViewport(0.f, 0.f, render_size_x, render_size_y);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -961,18 +1047,7 @@ int main()
 			}
 		}
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 		glDisable(GL_DEPTH_TEST);
-		glUseProgram(display_program);
-		glfwGetWindowSize(win, &win_size_x, &win_size_y);
-		glViewport(0.f, 0.f, win_size_x, win_size_y);
-
-		glBindVertexArray(fb_vao);
-		glBindBuffer(GL_ARRAY_BUFFER, fb_vbo);
-		
-		glUniform1i(framebuffer_uni, 3);
 		
 		GLint poly_mode;
 
@@ -980,11 +1055,36 @@ int main()
 
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+		glBindVertexArray(fb_vao);
+		glBindBuffer(GL_ARRAY_BUFFER, fb_vbo);
+
+		glUseProgram(lighting_program);
+
+		glUniform1i(light_color_uni, 4);
+		glUniform1i(light_normals_uni, 5);
+		glUniform1i(light_positions_uni, 6);
+		glUniform1i(light_depth_uni, 7);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_display);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glUseProgram(display_program);
+		glfwGetWindowSize(win, &win_size_x, &win_size_y);
+		glViewport(0.f, 0.f, win_size_x, win_size_y);
+		
+		glUniform1i(framebuffer_uni, 8);
+
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		glPolygonMode(GL_FRONT_AND_BACK, poly_mode);
 
 		glEnable(GL_DEPTH_TEST);
+
 		glfwSwapBuffers(win);
 		glfwPollEvents();
 		process_gl_errors();

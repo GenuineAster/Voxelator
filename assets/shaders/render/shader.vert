@@ -7,13 +7,14 @@ uniform mat4 view;
 uniform mat4 projection;
 uniform mat4 model;
 out vec3 vNormal;
-out vec3 vTexcoords;
 out vec3 vPosition;
+out vec3 vTexcoords;
 
 void main()
 {
-	vNormal = normalize(transpose(inverse(mat3(projection*view*model)))*normal);
+	mat4 trans = projection*view*model;
+	vNormal = normalize(transpose(inverse(mat3(trans)))*normal);
 	vTexcoords = texcoords;
-	gl_Position = (projection*view*model)*vec4(pos, 1.0);
+	gl_Position = trans*vec4(pos, 1.0);
 	vPosition = vec3(gl_Position);
 }

@@ -16,8 +16,6 @@ uniform isampler3D neighbors[6];
 uniform bool chunkIsBottom=false;
 // Size of chunks
 uniform vec3 chunkSize;
-// Normalized sprite size (used as multiplier)
-uniform vec2 spriteSizeNormalized;
 
 // Helper function that gets the block ID from the ID texture
 int getID(ivec3 pos) {
