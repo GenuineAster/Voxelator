@@ -301,7 +301,6 @@ int main()
 	glAttachShader(render_program, shader_render_frag);
 	glBindFragDataLocation(render_program, 0, "outColor");
 	glBindFragDataLocation(render_program, 1, "outNormal");
-	glBindFragDataLocation(render_program, 2, "outPosition");
 	glLinkProgram(render_program);
 	glUseProgram(render_program);
 
@@ -593,8 +592,9 @@ int main()
 
 	GLint light_color_uni = glGetUniformLocation(lighting_program, "colorTex");
 	GLint light_normals_uni = glGetUniformLocation(lighting_program, "normalsTex");
-	GLint light_positions_uni = glGetUniformLocation(lighting_program, "positionsTex");
 	GLint light_depth_uni = glGetUniformLocation(lighting_program, "depthTex");
+	GLint light_proj_uni = glGetUniformLocation(lighting_program, "projection");
+	glUniformMatrix4fv(light_proj_uni, 1, GL_FALSE, glm::value_ptr(projection));
 
 	wlog.log(L"Setting up transform feedback.\n");
 
@@ -804,6 +804,7 @@ int main()
 	GLuint framebuffer_render_color_texture;
 	glGenTextures(1, &framebuffer_render_color_texture);
 	glActiveTexture(GL_TEXTURE0+4);
+	glProgramUniform1i(lighting_program, light_color_uni, 4);
 	glBindTexture(GL_TEXTURE_2D, framebuffer_render_color_texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, render_size_x, render_size_y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -813,42 +814,41 @@ int main()
 	GLuint framebuffer_render_normals_texture;
 	glGenTextures(1, &framebuffer_render_normals_texture);
 	glActiveTexture(GL_TEXTURE0+5);
+	glProgramUniform1i(lighting_program, light_normals_uni, 5);
 	glBindTexture(GL_TEXTURE_2D, framebuffer_render_normals_texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, render_size_x, render_size_y, 0, GL_RG, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, framebuffer_render_normals_texture, 0);
 	
-	GLuint framebuffer_render_positions_texture;
-	glGenTextures(1, &framebuffer_render_positions_texture);
-	glActiveTexture(GL_TEXTURE0+6);
-	glBindTexture(GL_TEXTURE_2D, framebuffer_render_positions_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, render_size_x, render_size_y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, framebuffer_render_positions_texture, 0);
-
 	GLuint framebuffer_render_depth_texture;
 	glGenTextures(1, &framebuffer_render_depth_texture);
-	glActiveTexture(GL_TEXTURE0+7);
+	glActiveTexture(GL_TEXTURE0+6);
+	glProgramUniform1i(lighting_program, light_depth_uni, 6);
 	glBindTexture(GL_TEXTURE_2D, framebuffer_render_depth_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, render_size_x, render_size_y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, render_size_x, render_size_y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, framebuffer_render_depth_texture, 0);
 
-	GLenum drawbuffers[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
-	glDrawBuffers(3, drawbuffers);
+	GLenum drawbuffers[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_DEPTH_ATTACHMENT};
+	glDrawBuffers(2, drawbuffers);
+
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		wlog.log("Incomplete framebuffer!\n");
 
 	GLuint framebuffer_display;
 	glGenFramebuffers(1, &framebuffer_display);
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_display);
 
+	GLint framebuffer_uni = glGetUniformLocation(display_program, "framebuffer");
+
 	GLuint framebuffer_display_color_texture;
 	glGenTextures(1, &framebuffer_display_color_texture);
-	glActiveTexture(GL_TEXTURE0+8);
+	glActiveTexture(GL_TEXTURE0+7);
+	glProgramUniform1i(display_program, framebuffer_uni, 7);
 	glBindTexture(GL_TEXTURE_2D, framebuffer_display_color_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, render_size_x, render_size_y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, render_size_x, render_size_y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer_display_color_texture, 0);
@@ -868,9 +868,6 @@ int main()
 	glGenBuffers(1, &fb_vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, fb_vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(fb_vertices), fb_vertices, GL_STATIC_DRAW);
-
-	GLint framebuffer_uni = glGetUniformLocation(display_program, "framebuffer");
-	GLint viewport_size_uni = glGetUniformLocation(display_program, "viewport_size");
 
 	GLint fb_vao_pos_attrib = glGetAttribLocation(display_program, "pos");
 	if(fb_vao_pos_attrib != -1) {
@@ -1060,11 +1057,6 @@ int main()
 
 		glUseProgram(lighting_program);
 
-		glUniform1i(light_color_uni, 4);
-		glUniform1i(light_normals_uni, 5);
-		glUniform1i(light_positions_uni, 6);
-		glUniform1i(light_depth_uni, 7);
-
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_display);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -1076,8 +1068,6 @@ int main()
 		glUseProgram(display_program);
 		glfwGetWindowSize(win, &win_size_x, &win_size_y);
 		glViewport(0.f, 0.f, win_size_x, win_size_y);
-		
-		glUniform1i(framebuffer_uni, 8);
 
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 

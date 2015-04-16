@@ -4,23 +4,33 @@ layout(depth_unchanged) out float gl_FragDepth;
 layout(early_fragment_tests) in;
 
 in vec2 vTexcoords;
+in mat4 inverseProjection;
+
 uniform sampler2D normalsTex;
-uniform sampler2D positionsTex;
 uniform sampler2D colorTex;
 uniform sampler2D depthTex;
+
+
 out vec4 outCol;
 
 void main()
 {
 	// Discard empty fragments
 	float depth = texture(depthTex, vTexcoords).r;
-	if(depth > 0.9999999) {
+	if(depth >= 0.9999999) {
 		discard;
 	}
 
-	// Get position from position texture (trying to avoid doing this)
-	// This method works fine
-	vec3 Position = vec3(texture(positionsTex, vTexcoords));
+	vec3 Position;
+	vec4 position;
+	position.xy = vTexcoords.xy * 2.0 - 1.0;
+	position.z  = depth*2.0-1.0;
+	position.w  = 1.0;
+	position = inverseProjection * position;
+	position /= position.w;
+	position.z = -position.z;
+ 
+	Position = position.xyz;
 
 	// Get normal Z from X and Y
 	vec3 Normal = vec3(texture(normalsTex, vTexcoords));
@@ -36,4 +46,5 @@ void main()
 	// Mix colors
 	outCol = texture(colorTex, vTexcoords);
 	outCol = vec4(brightness * vec3(1.0) * outCol.rgb, outCol.a);
+	// outPos = vec4(Position, 1.0);
 }

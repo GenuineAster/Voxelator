@@ -7,14 +7,14 @@ in vec3 vNormal;
 in vec3 vPosition;
 in vec3 vTexcoords;
 out vec4 outNormal;
-out vec4 outPosition;
 out vec4 outColor;
 
 uniform sampler2DArray spritesheet;
 
 void main()
 {
+	if(vPosition.z == 0.0)
+		discard;
 	outNormal = vec4(vNormal, 1.0);
-	outPosition = vec4(vPosition, 1.0);
 	outColor = texture(spritesheet, vTexcoords);
 }
