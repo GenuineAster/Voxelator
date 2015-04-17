@@ -24,6 +24,8 @@
 #include <ctime>
 #include <random>
 #include "ext/stb/stb_image.h"
+#include "ext/stb/stb_image_write.h"
+
 
 // Common macro for casting OpenGL buffer offsets
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
@@ -40,13 +42,13 @@ using block_id = uint8_t;
 constexpr GLsizei components_per_vtx = 10;
 
 //Specify amount of chunks
-constexpr uint32_t   chunks_x=12;
-constexpr uint32_t   chunks_y=12;
-constexpr uint32_t   chunks_z=0; // Unused for now
+constexpr int32_t   chunks_x=12;
+constexpr int32_t   chunks_y=12;
+constexpr int32_t   chunks_z=0; // Unused for now
 // Specify chunk sizes, chunk_size_*  and chunk_total must be a power of 2.
-constexpr coord_type chunk_size_x=64;
-constexpr coord_type chunk_size_y=64;
-constexpr coord_type chunk_size_z=64;
+constexpr int32_t chunk_size_x=64;
+constexpr int32_t chunk_size_y=64;
+constexpr int32_t chunk_size_z=64;
 constexpr uint64_t   chunk_total =chunk_size_x*chunk_size_y*chunk_size_z;
 
 // Camera struct
@@ -102,6 +104,7 @@ constexpr int block_offset_x = 0;
 constexpr int block_offset_y = block_offset_x + sizeof(coord_type);
 constexpr int block_offset_z = block_offset_y + sizeof(coord_type);
 
+GLuint framebuffer_display_color_texture;
 
 constexpr float pi = 3.14159;
 
@@ -770,28 +773,6 @@ int main()
 
 	wlog.log(L"Starting main loop.\n");
 
-	glfwSetKeyCallback(win, [](GLFWwindow*, int key, int, int action, int){
-		switch(action) {
-			case GLFW_PRESS: {
-				switch(key) {
-
-				}
-			} break;
-			case GLFW_RELEASE: {
-				switch(key) {
-					case GLFW_KEY_F: {
-						static bool wireframe=false;
-						wireframe = !wireframe;
-						if(wireframe)
-							glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-						else
-							glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-					} break;
-				}
-			} break;
-		}
-	});
-
 	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, 0);
 	glEnable(GL_CULL_FACE);
 	glFrontFace(GL_CW);
@@ -843,7 +824,6 @@ int main()
 
 	GLint framebuffer_uni = glGetUniformLocation(display_program, "framebuffer");
 
-	GLuint framebuffer_display_color_texture;
 	glGenTextures(1, &framebuffer_display_color_texture);
 	glActiveTexture(GL_TEXTURE0+7);
 	glProgramUniform1i(display_program, framebuffer_uni, 7);
@@ -882,6 +862,50 @@ int main()
 	}
 
 	glUseProgram(render_program);
+
+	glfwSetKeyCallback(win, [](GLFWwindow*, int key, int, int action, int){
+		switch(action) {
+			case GLFW_PRESS: {
+				switch(key) {
+
+				}
+			} break;
+			case GLFW_RELEASE: {
+				switch(key) {
+					case GLFW_KEY_F: {
+						static bool wireframe=false;
+						wireframe = !wireframe;
+						if(wireframe)
+							glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+						else
+							glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+					} break;
+					case GLFW_KEY_U: {
+						uint8_t *pixels = new uint8_t[static_cast<int>(render_size_x)*static_cast<int>(render_size_y)*4];
+						glBindTexture(GL_TEXTURE_2D, framebuffer_display_color_texture);
+						glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+						uint8_t *topbottom_pixels = new uint8_t[static_cast<int>(render_size_x)*static_cast<int>(render_size_y)*4];
+						for(int y = 0; y < render_size_y; ++y) {
+							for(int x = 0; x < render_size_x; ++x) {
+								int ny = (render_size_y-1) - y;
+								topbottom_pixels[(x+y*int(render_size_x))*4+0] = pixels[(x+ny*int(render_size_x))*4+0];
+								topbottom_pixels[(x+y*int(render_size_x))*4+1] = pixels[(x+ny*int(render_size_x))*4+1];
+								topbottom_pixels[(x+y*int(render_size_x))*4+2] = pixels[(x+ny*int(render_size_x))*4+2];
+								topbottom_pixels[(x+y*int(render_size_x))*4+3] = pixels[(x+ny*int(render_size_x))*4+3];
+							}
+						}
+						if(!stbi_write_png("/tmp/screenshot.png", render_size_x, render_size_y, 4, topbottom_pixels, 0)) {
+							wlog.log(L"ERROR SAVING SCREENSHOT!\n");
+						}
+						else {
+							wlog.log(L"????\n");
+						}
+						delete[] pixels;
+					} break;
+				}
+			} break;
+		}
+	});
 
 	std::chrono::high_resolution_clock::time_point start, end, timetoprint;
 	timetoprint = end = start = std::chrono::high_resolution_clock::now();
