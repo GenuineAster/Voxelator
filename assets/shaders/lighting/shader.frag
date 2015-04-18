@@ -46,5 +46,4 @@ void main()
 	// Mix colors
 	outCol = texture(colorTex, vTexcoords);
 	outCol = vec4(brightness * vec3(1.0) * outCol.rgb, outCol.a);
-	// outPos = vec4(Position, 1.0);
 }
