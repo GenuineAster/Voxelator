@@ -42,13 +42,13 @@ using block_id = uint8_t;
 constexpr GLsizei components_per_vtx = 9;
 
 //Specify amount of chunks
-constexpr int32_t   chunks_x=12;
-constexpr int32_t   chunks_y=12;
+constexpr int32_t   chunks_x=32;
+constexpr int32_t   chunks_y=32;
 constexpr int32_t   chunks_z=0; // Unused for now
 // Specify chunk sizes, chunk_size_*  and chunk_total must be a power of 2.
-constexpr int32_t chunk_size_x=64;
-constexpr int32_t chunk_size_y=64;
-constexpr int32_t chunk_size_z=64;
+constexpr int32_t chunk_size_x=16;
+constexpr int32_t chunk_size_y=16;
+constexpr int32_t chunk_size_z=256;
 constexpr uint64_t   chunk_total =chunk_size_x*chunk_size_y*chunk_size_z;
 
 // Camera struct
