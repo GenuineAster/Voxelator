@@ -5,6 +5,7 @@ layout(triangle_strip, max_vertices = 24) out;
 
 out vec3 gTexcoords;
 out vec3 gNormal;
+out vec3 gPos;
 // Input texture to get block ID from
 uniform isampler3D IDTex;
 // Textures for chunks surrounding the chunk we're generating
@@ -49,17 +50,17 @@ void main() {
 		// Draw first face
 		gNormal = vec3(0, 0, -1);
 		//   First triangle
-		gl_Position = pos;
+		gPos = vec3(pos);
 		gTexcoords = vec3(0.f, 0.f, ID);
 		EmitVertex();
-		gl_Position = pos + vec4(1.0, 0.0, 0.0, 0.0);
+		gPos = vec3(pos + vec4(1.0, 0.0, 0.0, 0.0));
 		gTexcoords = vec3(1.0, 0.0, ID);
 		EmitVertex();
-		gl_Position = pos + vec4(0.0, 1.0, 0.0, 0.0);
+		gPos = vec3(pos + vec4(0.0, 1.0, 0.0, 0.0));
 		gTexcoords = vec3(0.0, 1.0, ID);
 		EmitVertex();
 		//   Second triangle
-		gl_Position = pos + vec4(1.0, 1.0, 0.0, 0.0);
+		gPos = vec3(pos + vec4(1.0, 1.0, 0.0, 0.0));
 		gTexcoords = vec3(1.0, 1.0, ID);
 		EmitVertex();
 		EndPrimitive();
@@ -73,17 +74,17 @@ void main() {
 		// Draw second face
 		gNormal = vec3(-1, 0, 0);
 		//   First triangle
-		gl_Position = pos;
+		gPos = vec3(pos);
 		gTexcoords = vec3(0.f, 0.f, ID);
 		EmitVertex();
-		gl_Position = pos + vec4(0.0, 1.0, 0.0, 0.0);
+		gPos = vec3(pos + vec4(0.0, 1.0, 0.0, 0.0));
 		gTexcoords = vec3(0.0, 1.0, ID);
 		EmitVertex();
-		gl_Position = pos + vec4(0.0, 0.0, 1.0, 0.0);
+		gPos = vec3(pos + vec4(0.0, 0.0, 1.0, 0.0));
 		gTexcoords = vec3(1.0, 0.0, ID);
 		EmitVertex();
 		//   Second triangle
-		gl_Position = pos + vec4(0.0, 1.0, 1.0, 0.0);
+		gPos = vec3(pos + vec4(0.0, 1.0, 1.0, 0.0));
 		gTexcoords = vec3(1.0, 1.0, ID);
 		EmitVertex();
 		EndPrimitive();
@@ -97,17 +98,17 @@ void main() {
 		// Draw third face
 		gNormal = vec3(0, -1, 0);
 		//   First triangle
-		gl_Position = pos;
+		gPos = vec3(pos);
 		gTexcoords = vec3(0.f, 0.f, ID);
 		EmitVertex();
-		gl_Position = pos + vec4(0.0, 0.0, 1.0, 0.0);
+		gPos = vec3(pos + vec4(0.0, 0.0, 1.0, 0.0));
 		gTexcoords = vec3(0.0, 1.0, ID);
 		EmitVertex();
-		gl_Position = pos + vec4(1.0, 0.0, 0.0, 0.0);
+		gPos = vec3(pos + vec4(1.0, 0.0, 0.0, 0.0));
 		gTexcoords = vec3(1.0, 0.0, ID);
 		EmitVertex();
 		//   Second triangle
-		gl_Position = pos + vec4(1.0, 0.0, 1.0, 0.0);
+		gPos = vec3(pos + vec4(1.0, 0.0, 1.0, 0.0));
 		gTexcoords = vec3(1.0, 1.0, ID);
 		EmitVertex();
 		EndPrimitive();
@@ -121,17 +122,17 @@ void main() {
 		// Draw fourth face
 		gNormal = vec3(1, 0, 0);
 		//   First triangle
-		gl_Position = pos + vec4(1.0, 1.0, 1.0, 0.0);
+		gPos = vec3(pos + vec4(1.0, 1.0, 1.0, 0.0));
 		gTexcoords = vec3(1.0, 1.0, ID);
 		EmitVertex();
-		gl_Position = pos + vec4(1.0, 1.0, 0.0, 0.0);
+		gPos = vec3(pos + vec4(1.0, 1.0, 0.0, 0.0));
 		gTexcoords = vec3(0.0, 1.0, ID);
 		EmitVertex();
-		gl_Position = pos + vec4(1.0, 0.0, 1.0, 0.0);
+		gPos = vec3(pos + vec4(1.0, 0.0, 1.0, 0.0));
 		gTexcoords = vec3(1.0, 0.0, ID);
 		EmitVertex();
 		//   Second triangle
-		gl_Position = pos + vec4(1.0, 0.0, 0.0, 0.0);
+		gPos = vec3(pos + vec4(1.0, 0.0, 0.0, 0.0));
 		gTexcoords = vec3(0.0, 0.0, ID);
 		EmitVertex();
 		EndPrimitive();
@@ -145,17 +146,17 @@ void main() {
 		// Draw fifth face
 		gNormal = vec3(0, 1, 0);
 		//   First triangle
-		gl_Position = pos + vec4(1.0, 1.0, 1.0, 0.0);
+		gPos = vec3(pos + vec4(1.0, 1.0, 1.0, 0.0));
 		gTexcoords = vec3(1.0, 1.0, ID);
 		EmitVertex();
-		gl_Position = pos + vec4(0.0, 1.0, 1.0, 0.0);
+		gPos = vec3(pos + vec4(0.0, 1.0, 1.0, 0.0));
 		gTexcoords = vec3(0.0, 1.0, ID);
 		EmitVertex();
-		gl_Position = pos + vec4(1.0, 1.0, 0.0, 0.0);
+		gPos = vec3(pos + vec4(1.0, 1.0, 0.0, 0.0));
 		gTexcoords = vec3(1.0, 0.0, ID);
 		EmitVertex();
 		//   Second triangle
-		gl_Position = pos + vec4(0.0, 1.0, 0.0, 0.0);
+		gPos = vec3(pos + vec4(0.0, 1.0, 0.0, 0.0));
 		gTexcoords = vec3(0.0, 0.0, ID);
 		EmitVertex();
 		EndPrimitive();
@@ -169,17 +170,17 @@ void main() {
 		// Draw sixth face
 		gNormal = vec3(0, 0, 1);
 		//   First triangle
-		gl_Position = pos + vec4(1.0, 1.0, 1.0, 0.0);
+		gPos = vec3(pos + vec4(1.0, 1.0, 1.0, 0.0));
 		gTexcoords = vec3(1.0, 1.0, ID);
 		EmitVertex();
-		gl_Position = pos + vec4(1.0, 0.0, 1.0, 0.0);
+		gPos = vec3(pos + vec4(1.0, 0.0, 1.0, 0.0));
 		gTexcoords = vec3(0.0, 1.0, ID);
 		EmitVertex();
-		gl_Position = pos + vec4(0.0, 1.0, 1.0, 0.0);
+		gPos = vec3(pos + vec4(0.0, 1.0, 1.0, 0.0));
 		gTexcoords = vec3(1.0, 0.0, ID);
 		EmitVertex();
 		//   Second triangle
-		gl_Position = pos + vec4(0.0, 0.0, 1.0, 0.0);
+		gPos = vec3(pos + vec4(0.0, 0.0, 1.0, 0.0));
 		gTexcoords = vec3(0.0, 0.0, ID);
 		EmitVertex();
 		EndPrimitive();

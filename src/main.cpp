@@ -39,7 +39,7 @@ constexpr float render_size_y = 2160.f;
 using coord_type = uint8_t;
 using block_id = uint8_t;
 
-constexpr GLsizei components_per_vtx = 10;
+constexpr GLsizei components_per_vtx = 9;
 
 //Specify amount of chunks
 constexpr int32_t   chunks_x=12;
@@ -248,7 +248,7 @@ int main()
 	GLuint generate_program = glCreateProgram();
 	glAttachShader(generate_program, shader_generate_vert);
 	glAttachShader(generate_program, shader_generate_geom);
-	const char *varyings[] = {"gl_Position", "gTexcoords", "gNormal"};
+	const char *varyings[] = {"gPos", "gTexcoords", "gNormal"};
 	glTransformFeedbackVaryings(generate_program, 3, varyings, GL_INTERLEAVED_ATTRIBS);
 	glLinkProgram(generate_program);
 	glUseProgram(generate_program);
@@ -754,19 +754,19 @@ int main()
 			GLint pos_attrib = glGetAttribLocation(render_program, "pos");
 			if(pos_attrib != -1) {
 				glEnableVertexAttribArray(pos_attrib);
-				glVertexAttribPointer(pos_attrib, 4, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*0));
+				glVertexAttribPointer(pos_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*0));
 			}
 
 			GLint texcoord_attrib = glGetAttribLocation(render_program, "texcoords");
 			if(texcoord_attrib != -1) {
 				glEnableVertexAttribArray(texcoord_attrib);
-				glVertexAttribPointer(texcoord_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*4));
+				glVertexAttribPointer(texcoord_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*3));
 			}
 
 			GLint normal_attrib = glGetAttribLocation(render_program, "normal");
 			if(normal_attrib != -1) {
 				glEnableVertexAttribArray(normal_attrib);
-				glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*7));
+				glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*6));
 			}
 		}
 	}
@@ -833,8 +833,8 @@ int main()
 	glProgramUniform1i(lighting_program, light_depth_uni, 6);
 	glBindTexture(GL_TEXTURE_2D, framebuffer_render_depth_texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, render_size_x, render_size_y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, framebuffer_render_depth_texture, 0);
 
 	GLenum drawbuffers[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_DEPTH_ATTACHMENT};
