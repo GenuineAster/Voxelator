@@ -664,26 +664,51 @@ int main()
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
 			glBindVertexArray(generate_vao);
 
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_3D, empty_chunk.texid);
+			empty_chunk.tex = 0;
+
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_3D, chunks[x][y].texid);
+			chunks[x][y].tex = 1;
+
+
 			// Get neighboring chunks, or set to empty_chunk if none
 			GLint neighbor_tex[6];
-			if(x<chunks_x-1)
-				neighbor_tex[0]=chunks[x+1][y].tex;
-			else
-				neighbor_tex[0]=empty_chunk.tex;
-			if(y<chunks_y-1)
-				neighbor_tex[1]=chunks[x][y+1].tex;
-			else
-				neighbor_tex[1]=empty_chunk.tex;
-			neighbor_tex[2]=empty_chunk.tex;
-			if(x)
-				neighbor_tex[3]=chunks[x-1][y].tex;
-			else
-				neighbor_tex[3]=empty_chunk.tex;
-			if(y)
-				neighbor_tex[4]=chunks[x][y-1].tex;
-			else
-				neighbor_tex[4]=empty_chunk.tex;
-			neighbor_tex[5]=empty_chunk.tex;
+			glActiveTexture(GL_TEXTURE2);
+			if(x<chunks_x-1) {
+				glBindTexture(GL_TEXTURE_3D, chunks[x+1][y].texid);
+				neighbor_tex[0]=2;
+			}
+			else {
+				neighbor_tex[0]=0;
+			}
+			glActiveTexture(GL_TEXTURE3);
+			if(y<chunks_y-1) {
+				glBindTexture(GL_TEXTURE_3D, chunks[x][y+1].texid);
+				neighbor_tex[1]=3;
+			}
+			else {
+				neighbor_tex[1]=0;
+			}
+			neighbor_tex[2]=0;
+			glActiveTexture(GL_TEXTURE4);
+			if(x) {
+				glBindTexture(GL_TEXTURE_3D, chunks[x-1][y].texid);
+				neighbor_tex[3]=4;
+			}
+			else {
+				neighbor_tex[3]=0;
+			}
+			glActiveTexture(GL_TEXTURE5);
+			if(y) {
+				glBindTexture(GL_TEXTURE_3D, chunks[x][y-1].texid);
+				neighbor_tex[4]=5;
+			}
+			else {
+				neighbor_tex[4]=0;
+			}
+			neighbor_tex[5]=0;
 
 			glUniform1i(chunk_id_uni, chunks[x][y].tex);
 			//This is always true for now, as we only have a world height
