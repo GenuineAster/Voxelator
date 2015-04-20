@@ -254,6 +254,60 @@ int main()
 	glUseProgram(generate_program);
 
 	process_gl_errors();
+
+	wlog.log(L"Creating frustum_culling vertex shader.\n");
+	std::string shader_frustum_culling_vert_source;
+	if(!readfile("assets/shaders/frustum_culling/shader.vert", shader_frustum_culling_vert_source)) {
+		return cleanup(-4, L"assets/shaders/frustum_culling/shader.vert");
+	}
+	GLuint shader_frustum_culling_vert = glCreateShader(GL_VERTEX_SHADER);
+	src = shader_frustum_culling_vert_source.c_str();
+	glShaderSource(shader_frustum_culling_vert, 1, &src, NULL);
+	glCompileShader(shader_frustum_culling_vert);
+	glGetShaderiv(shader_frustum_culling_vert, GL_COMPILE_STATUS, &status);
+	glGetShaderInfoLog(shader_frustum_culling_vert, 512, NULL, buff);
+	if(buff[0] && status == GL_TRUE) {
+		wlog.log(L"Generate vertex shader log:\n");
+		wlog.log(buff, false);
+		wlog.log(L"\n", false);
+	}
+	else if(status != GL_TRUE) {
+		return cleanup(-5, std::wstring(buff[0], buff[511]));
+	}
+	process_gl_errors();
+
+	wlog.log(L"Creating frustum_culling geometry shader.\n");
+	std::string shader_frustum_culling_geom_source;
+	if(!readfile("assets/shaders/frustum_culling/shader.geom", shader_frustum_culling_geom_source)) {
+		return cleanup(-4, L"assets/shaders/frustum_culling/shader.geom");
+	}
+	GLuint shader_frustum_culling_geom = glCreateShader(GL_GEOMETRY_SHADER);
+	src = shader_frustum_culling_geom_source.c_str();
+	glShaderSource(shader_frustum_culling_geom, 1, &src, NULL);
+	glCompileShader(shader_frustum_culling_geom);
+	glGetShaderiv(shader_frustum_culling_geom, GL_COMPILE_STATUS, &status);
+	glGetShaderInfoLog(shader_frustum_culling_geom, 512, NULL, buff);
+	if(buff[0] && status == GL_TRUE) {
+		wlog.log(L"Generate geometry shader log:\n");
+		wlog.log(buff, false);
+		wlog.log(L"\n", false);
+	}
+	else if(status != GL_TRUE) {
+		wlog.log(buff);
+		return cleanup(-5, std::wstring(buff[0], buff[511]));
+	}
+	process_gl_errors();
+
+	wlog.log(L"Creating and linking frustum_culling shader program.\n");
+	GLuint frustum_culling_program = glCreateProgram();
+	glAttachShader(frustum_culling_program, shader_frustum_culling_vert);
+	glAttachShader(frustum_culling_program, shader_frustum_culling_geom);
+	const char *fcvaryings[] = {"gPos"};
+	glTransformFeedbackVaryings(frustum_culling_program, 1, fcvaryings, GL_INTERLEAVED_ATTRIBS);
+	glLinkProgram(frustum_culling_program);
+	glUseProgram(frustum_culling_program);
+
+	process_gl_errors();
 	
 	wlog.log(L"Creating render vertex shader.\n");
 	std::string shader_render_vert_source;
@@ -599,9 +653,19 @@ int main()
 	GLint light_proj_uni = glGetUniformLocation(lighting_program, "projection");
 	glUniformMatrix4fv(light_proj_uni, 1, GL_FALSE, glm::value_ptr(projection));
 
-	wlog.log(L"Setting up transform feedback.\n");
+	glUseProgram(frustum_culling_program);
+
+	GLint frustum_view_uni = glGetUniformLocation(frustum_culling_program, "view");
+	GLint frustum_proj_uni = glGetUniformLocation(frustum_culling_program, "proj");
+	glUniformMatrix4fv(frustum_proj_uni, 1, GL_FALSE, glm::value_ptr(projection));
+	GLint frustum_chunk_size_uni = glGetUniformLocation(frustum_culling_program, "chunkSize");
+	glUniform3fv(frustum_chunk_size_uni, 1, glm::value_ptr(
+		glm::vec3(chunk_size_x,chunk_size_y,chunk_size_z))
+	);
 
 	glUseProgram(generate_program);
+
+	wlog.log(L"Setting up transform feedback.\n");
 
 	wlog.log(L"Creating and setting block chunk texture uniform data.\n");
 	GLint chunk_id_uni = glGetUniformLocation(generate_program, "IDTex");
@@ -612,9 +676,6 @@ int main()
 
 	wlog.log(L"Creating and setting block chunk is bottom uniform data.\n");
 	GLint chunk_is_bottom_id_uni = glGetUniformLocation(generate_program, "chunkIsBottom");
-
-
-	process_gl_errors();
 
 	wlog.log(L"Creating and setting block chunk size uniform data.\n");
 	GLint chunk_size_uni = glGetUniformLocation(generate_program, "chunkSize");
@@ -886,6 +947,44 @@ int main()
 		glVertexAttribPointer(fb_vao_texcoord_attrib, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), BUFFER_OFFSET(sizeof(float)*2));
 	}
 
+	GLuint fc_tbo;
+	GLuint fc_tfo;
+	glGenTransformFeedbacks(1, &fc_tfo);
+	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, fc_tfo);
+	glGenBuffers(1, &fc_tbo);
+	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, fc_tbo);
+	glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(float)*chunks_x*chunks_y*3, nullptr, GL_STREAM_COPY);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	GLuint fc_vbo;
+	glGenBuffers(1, &fc_vbo);
+	GLuint fc_vao;
+	glGenVertexArrays(1, &fc_vao);
+	GLuint fc_query;
+	glGenQueries(1, &fc_query);
+	GLuint fc_primitives;
+
+	glBindBuffer(GL_ARRAY_BUFFER, fc_vbo);
+	glBindVertexArray(fc_vao);
+
+	glm::ivec3 *indices = new glm::ivec3[chunks_x*chunks_y];
+	for(int y=0;y<chunks_y;++y) {
+		for(int x=0;x<chunks_x;++x) {
+			indices[x+y*chunks_x] = glm::ivec3(x, y, 0);
+		}
+	}
+
+	glm::ivec3 *visible_indices = new glm::ivec3[chunks_x*chunks_y];
+
+	glBufferData(GL_ARRAY_BUFFER, sizeof(int)*3*chunks_x*chunks_y, indices, GL_STATIC_DRAW);
+
+	GLint fc_pos_attrib = glGetAttribLocation(frustum_culling_program, "pos");
+	if(fc_pos_attrib != -1) {
+		glEnableVertexAttribArray(fc_pos_attrib);
+		glVertexAttribPointer(fc_pos_attrib, 3, GL_INT, GL_FALSE, 3*sizeof(int), BUFFER_OFFSET(sizeof(float)*0));
+	}
+
 	glUseProgram(render_program);
 
 	glfwSetKeyCallback(win, [](GLFWwindow*, int key, int, int action, int){
@@ -939,6 +1038,8 @@ int main()
 
 	long long cnt=0;
 	long double ft_total=0.f;
+
+	cam.position = glm::vec3(chunks_x*chunk_size_x/2.f, chunks_y*chunk_size_y/2.f, 0.f);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -1062,6 +1163,31 @@ int main()
 			cam.position += -glm::normalize(cam.up)*fts_float*100.f;
 		}
 
+		glUseProgram(frustum_culling_program);
+
+		glUniformMatrix4fv(frustum_view_uni, 1, GL_FALSE, glm::value_ptr(view));
+
+		glBindBuffer(GL_ARRAY_BUFFER, fc_vbo);
+		glBindVertexArray(fc_vao);
+		glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, fc_tfo);
+		glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, fc_tbo);
+		glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, fc_tbo);
+
+		glEnable(GL_RASTERIZER_DISCARD);
+
+
+		glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, fc_query);
+		glBeginTransformFeedback(GL_POINTS);
+			glDrawArrays(GL_POINTS, 0, chunks_x*chunks_y);
+		glEndTransformFeedback();
+		glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
+
+		glDisable(GL_RASTERIZER_DISCARD);
+
+		glGetQueryObjectuiv(fc_query, GL_QUERY_RESULT, &fc_primitives);
+
+		glGetBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, 0, fc_primitives*sizeof(int)*3, visible_indices);
+
 		glUseProgram(render_program);
 
 		view = glm::lookAt(
@@ -1076,21 +1202,22 @@ int main()
 		glViewport(0.f, 0.f, render_size_x, render_size_y);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		for(unsigned int x=0;x<chunks.size();++x) {
-			for(unsigned int y=0;y<chunks[x].size();++y) {
-				glm::mat4 transform;
-				transform = glm::translate(
-					transform,
-					glm::vec3(chunk::chunk_size)*
-					glm::vec3(chunks[x][y].position)
-				);
-				glUniformMatrix4fv(
-					model_uni, 1, GL_FALSE, glm::value_ptr(transform)
-				);
-				glBindVertexArray(chunks[x][y].vtx_array);
-				glBindBuffer(GL_ARRAY_BUFFER, chunks[x][y].buffer_geometry);
-				glDrawArrays(GL_TRIANGLES, 0, chunks[x][y].vertex_count);
-			}
+
+		for(unsigned int i = 0; i < fc_primitives; ++i) {
+			unsigned int x = visible_indices[i].x;
+			unsigned int y = visible_indices[i].y;
+			glm::mat4 transform;
+			transform = glm::translate(
+				transform,
+				glm::vec3(chunk::chunk_size)*
+				glm::vec3(chunks[x][y].position)
+			);
+			glUniformMatrix4fv(
+				model_uni, 1, GL_FALSE, glm::value_ptr(transform)
+			);
+			glBindVertexArray(chunks[x][y].vtx_array);
+			glBindBuffer(GL_ARRAY_BUFFER, chunks[x][y].buffer_geometry);
+			glDrawArrays(GL_TRIANGLES, 0, chunks[x][y].vertex_count);
 		}
 
 		glDisable(GL_DEPTH_TEST);
