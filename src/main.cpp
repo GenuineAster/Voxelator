@@ -32,7 +32,7 @@
 
 constexpr float init_win_size_x = 960.f;
 constexpr float init_win_size_y = 540.f;
- 
+
 constexpr float render_size_x = 3840.f;
 constexpr float render_size_y = 2160.f;
 
@@ -124,17 +124,15 @@ int main()
 			c = chunk();
 		}
 	}
+
 	// Fill chunk offsets with.. their offsets
-	std::generate(chunk::offsets->begin(), chunk::offsets->end(), []{
-		static uint8_t x,y,z=y=x=0;
-		static bool first=true;
-		if(!first){
-			if(x>=chunk_size_x-1){x=0;++y;}
-			else ++x;
-			if(y>=chunk_size_y){y=0;++z;}
-		} else first=false;
-		return block{x,y,z};
-	});
+	for(int z=0;z<chunk_size_z;++z) {
+		for(int y=0;y<chunk_size_y;++y) {
+			for(int x=0;x<chunk_size_x;++x) {
+				(*chunk::offsets)[z*chunk_size_x*chunk_size_y+y*chunk_size_x+x] = block{x,y,z};
+			}
+		}
+	}
 
 	using namespace std::literals::chrono_literals;
 
@@ -572,20 +570,21 @@ int main()
 			chunks[x][y].texnum = GL_TEXTURE0 + 1 + i;
 			chunks[x][y].IDs = new std::array<block_id, chunk_total>;
 			chunks[x][y].position = glm::vec3(x, y, 0.f);
-			int _x,_y,_z=_y=_x=0;
-			bool first=true;
-			std::generate(chunks[x][y].IDs->begin(), chunks[x][y].IDs->end(), 
-				[&x=_x,&y=_y,&z=_z,n_sprites,&first,&rd_engine,&dist]{
-					if(!first){
-						if(x>=chunk_size_x-1){x=0;++y;}
-						else ++x;
-						if(y>=chunk_size_y){y=0;++z;}
-					} else first=false;
-					int height = abs(x-(chunk_size_x/2)) + 
-						abs(y-(chunk_size_y/2));
-					return (z>height)?dist(rd_engine):0;
+
+			for(int _z=0;_z<chunk_size_z;++_z) {
+				for(int _y=0;_y<chunk_size_y;++_y) {
+					for(int _x=0;_x<chunk_size_x;++_x) {
+						int height = abs(_x-(chunk_size_x/2)) 
+						           + abs(_y-(chunk_size_y/2));
+						size_t index = _z*chunk_size_x*chunk_size_y
+						             + _y*chunk_size_x
+						             + _x;
+						(*chunks[x][y].IDs)[index] =
+							(_z>height)?dist(rd_engine):0;	
+					}
 				}
-			);
+			}
+
 			glActiveTexture(chunks[x][y].texnum);
 			glGenTextures(1, &chunks[x][y].texid);
 			glBindTexture(GL_TEXTURE_3D, chunks[x][y].texid);
