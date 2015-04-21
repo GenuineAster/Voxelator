@@ -70,5 +70,6 @@ Shader::Shader() {
 }
 
 Shader::~Shader() {
-	glDeleteShader(m_shader);
+	if(*this)
+		glDeleteShader(m_shader);
 }
