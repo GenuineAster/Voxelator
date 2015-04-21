@@ -182,25 +182,20 @@ int main()
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_BLEND);
 
-	process_gl_errors();
 
 	wlog.log("Generating Vertex Array Object.\n");
 	GLuint vao;
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
 
-	process_gl_errors();
-
 	wlog.log(L"Creating Shaders.\n");
 
 	Shader shader_generate_vert;
 	shader_generate_vert.load_file(GL_VERTEX_SHADER, "assets/shaders/generate/shader.vert");
-	process_gl_errors();
 
 	wlog.log(L"Creating generate geometry shader.\n");
 	Shader shader_generate_geom;
 	shader_generate_geom.load_file(GL_GEOMETRY_SHADER, "assets/shaders/generate/shader.geom");
-	process_gl_errors();
 
 	wlog.log(L"Creating and linking generate shader program.\n");
 
@@ -210,17 +205,14 @@ int main()
 	generate_program.transform_feedback_varyings({"gPos", "gTexcoords", "gNormal"});
 	generate_program.link();
 
-	process_gl_errors();
 
 	wlog.log(L"Creating frustum_culling vertex shader.\n");
 	Shader shader_frustum_culling_vert;
 	shader_frustum_culling_vert.load_file(GL_VERTEX_SHADER, "assets/shaders/frustum_culling/shader.vert");
-	process_gl_errors();
 
 	wlog.log(L"Creating frustum_culling geometry shader.\n");
 	Shader shader_frustum_culling_geom;
 	shader_frustum_culling_geom.load_file(GL_GEOMETRY_SHADER, "assets/shaders/frustum_culling/shader.geom");
-	process_gl_errors();
 
 	wlog.log(L"Creating and linking frustum_culling shader program.\n");
 
@@ -230,17 +222,14 @@ int main()
 	frustum_culling_program.transform_feedback_varyings({"gPos"});
 	frustum_culling_program.link();
 
-	process_gl_errors();
 	
 	wlog.log(L"Creating render vertex shader.\n");
 	Shader shader_render_vert;
 	shader_render_vert.load_file(GL_VERTEX_SHADER, "assets/shaders/render/shader.vert");
-	process_gl_errors();
 
 	wlog.log(L"Creating render fragment shader.\n");
 	Shader shader_render_frag;
 	shader_render_frag.load_file(GL_FRAGMENT_SHADER, "assets/shaders/render/shader.frag");
-	process_gl_errors();
 
 	wlog.log(L"Creating and linking render shader program.\n");
 
@@ -251,18 +240,15 @@ int main()
 	glBindFragDataLocation(render_program, 1, "outNormal");
 	render_program.link();
 
-	process_gl_errors();
 
 	wlog.log(L"Creating lighting vertex shader.\n");
 	Shader shader_lighting_vert;
 	shader_lighting_vert.load_file(GL_VERTEX_SHADER, "assets/shaders/lighting/shader.vert");
-	process_gl_errors();
 
 	wlog.log(L"Creating lighting fragment shader.\n");
 	Shader shader_lighting_frag;
 	shader_lighting_frag.load_file(GL_FRAGMENT_SHADER, "assets/shaders/lighting/shader.frag");
 
-	process_gl_errors();
 
 	wlog.log(L"Creating and linking lighting shader program.\n");
 
@@ -272,17 +258,14 @@ int main()
 	glBindFragDataLocation(lighting_program, 0, "outCol");
 	lighting_program.link();
 
-	process_gl_errors();
 
 	wlog.log(L"Creating display vertex shader.\n");
 	Shader shader_display_vert;
 	shader_display_vert.load_file(GL_VERTEX_SHADER, "assets/shaders/display/shader.vert");
-	process_gl_errors();
 
 	wlog.log(L"Creating display fragment shader.\n");
 	Shader shader_display_frag;
 	shader_display_frag.load_file(GL_FRAGMENT_SHADER, "assets/shaders/display/shader.frag");
-	process_gl_errors();
 
 	wlog.log(L"Creating and linking display shader program.\n");
 
