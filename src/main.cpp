@@ -7,6 +7,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include "Logger/Logger.hpp"
 #include "Shader/Shader.hpp"
+#include "Program/Program.hpp"
 #include <thread>
 #include <vector>
 #include <sstream>
@@ -202,13 +203,12 @@ int main()
 	process_gl_errors();
 
 	wlog.log(L"Creating and linking generate shader program.\n");
-	GLuint generate_program = glCreateProgram();
-	glAttachShader(generate_program, shader_generate_vert);
-	glAttachShader(generate_program, shader_generate_geom);
-	const char *varyings[] = {"gPos", "gTexcoords", "gNormal"};
-	glTransformFeedbackVaryings(generate_program, 3, varyings, GL_INTERLEAVED_ATTRIBS);
-	glLinkProgram(generate_program);
-	glUseProgram(generate_program);
+
+	Program generate_program;
+	generate_program.attach(shader_generate_vert);
+	generate_program.attach(shader_generate_geom);
+	generate_program.transform_feedback_varyings({"gPos", "gTexcoords", "gNormal"});
+	generate_program.link();
 
 	process_gl_errors();
 
@@ -223,13 +223,12 @@ int main()
 	process_gl_errors();
 
 	wlog.log(L"Creating and linking frustum_culling shader program.\n");
-	GLuint frustum_culling_program = glCreateProgram();
-	glAttachShader(frustum_culling_program, shader_frustum_culling_vert);
-	glAttachShader(frustum_culling_program, shader_frustum_culling_geom);
-	const char *fcvaryings[] = {"gPos"};
-	glTransformFeedbackVaryings(frustum_culling_program, 1, fcvaryings, GL_INTERLEAVED_ATTRIBS);
-	glLinkProgram(frustum_culling_program);
-	glUseProgram(frustum_culling_program);
+
+	Program frustum_culling_program;
+	frustum_culling_program.attach(shader_frustum_culling_vert);
+	frustum_culling_program.attach(shader_frustum_culling_geom);
+	frustum_culling_program.transform_feedback_varyings({"gPos"});
+	frustum_culling_program.link();
 
 	process_gl_errors();
 	
@@ -244,13 +243,13 @@ int main()
 	process_gl_errors();
 
 	wlog.log(L"Creating and linking render shader program.\n");
-	GLuint render_program = glCreateProgram();
-	glAttachShader(render_program, shader_render_vert);
-	glAttachShader(render_program, shader_render_frag);
+
+	Program render_program;
+	render_program.attach(shader_render_vert);
+	render_program.attach(shader_render_frag);
 	glBindFragDataLocation(render_program, 0, "outColor");
 	glBindFragDataLocation(render_program, 1, "outNormal");
-	glLinkProgram(render_program);
-	glUseProgram(render_program);
+	render_program.link();
 
 	process_gl_errors();
 
@@ -266,12 +265,12 @@ int main()
 	process_gl_errors();
 
 	wlog.log(L"Creating and linking lighting shader program.\n");
-	GLuint lighting_program = glCreateProgram();
-	glAttachShader(lighting_program, shader_lighting_vert);
-	glAttachShader(lighting_program, shader_lighting_frag);
+
+	Program lighting_program;
+	lighting_program.attach(shader_lighting_vert);
+	lighting_program.attach(shader_lighting_frag);
 	glBindFragDataLocation(lighting_program, 0, "outCol");
-	glLinkProgram(lighting_program);
-	glUseProgram(lighting_program);
+	lighting_program.link();
 
 	process_gl_errors();
 
@@ -286,12 +285,12 @@ int main()
 	process_gl_errors();
 
 	wlog.log(L"Creating and linking display shader program.\n");
-	GLuint display_program = glCreateProgram();
-	glAttachShader(display_program, shader_display_vert);
-	glAttachShader(display_program, shader_display_frag);
+
+	Program display_program;
+	display_program.attach(shader_display_vert);
+	display_program.attach(shader_display_frag);
 	glBindFragDataLocation(display_program, 0, "color");
-	glLinkProgram(display_program);
-	glUseProgram(display_program);
+	display_program.link();
 
 	process_gl_errors();
 
