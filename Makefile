@@ -11,7 +11,7 @@ else
 	TMPPATH += /tmp
 endif
 
-voxelator: src/main.o src/ext/stb/stb_image_pre.o src/ext/stb/stb_image_write_pre.o
+voxelator: src/main.o src/ext/stb/stb_image_pre.o src/ext/stb/stb_image_write_pre.o src/Shader/Shader.o
 	$(CXX) $^ $(CXXFLAGS) $(LDFLAGS) -o $@
 
 all: voxelator

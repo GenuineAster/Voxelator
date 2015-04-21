@@ -6,6 +6,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include "Logger/Logger.hpp"
+#include "Shader/Shader.hpp"
 #include <thread>
 #include <vector>
 #include <sstream>
@@ -191,49 +192,13 @@ int main()
 
 	wlog.log(L"Creating Shaders.\n");
 
-	wlog.log(L"Creating generate vertex shader.\n");
-	std::string shader_generate_vert_source;
-	if(!readfile("assets/shaders/generate/shader.vert", shader_generate_vert_source)) {
-		return cleanup(-4, L"assets/shaders/generate/shader.vert");
-	}
-	GLuint shader_generate_vert = glCreateShader(GL_VERTEX_SHADER);
-	const char* src = shader_generate_vert_source.c_str();
-	glShaderSource(shader_generate_vert, 1, &src, NULL);
-	glCompileShader(shader_generate_vert);
-	GLint status;
-	glGetShaderiv(shader_generate_vert, GL_COMPILE_STATUS, &status);
-	char buff[512];
-	glGetShaderInfoLog(shader_generate_vert, 512, NULL, buff);
-	if(buff[0] && status == GL_TRUE) {
-		wlog.log(L"Generate vertex shader log:\n");
-		wlog.log(buff, false);
-		wlog.log(L"\n", false);
-	}
-	else if(status != GL_TRUE) {
-		return cleanup(-5, std::wstring(buff[0], buff[511]));
-	}
+	Shader shader_generate_vert;
+	shader_generate_vert.load_file(GL_VERTEX_SHADER, "assets/shaders/generate/shader.vert");
 	process_gl_errors();
 
 	wlog.log(L"Creating generate geometry shader.\n");
-	std::string shader_generate_geom_source;
-	if(!readfile("assets/shaders/generate/shader.geom", shader_generate_geom_source)) {
-		return cleanup(-4, L"assets/shaders/generate/shader.geom");
-	}
-	GLuint shader_generate_geom = glCreateShader(GL_GEOMETRY_SHADER);
-	src = shader_generate_geom_source.c_str();
-	glShaderSource(shader_generate_geom, 1, &src, NULL);
-	glCompileShader(shader_generate_geom);
-	glGetShaderiv(shader_generate_geom, GL_COMPILE_STATUS, &status);
-	glGetShaderInfoLog(shader_generate_geom, 512, NULL, buff);
-	if(buff[0] && status == GL_TRUE) {
-		wlog.log(L"Generate geometry shader log:\n");
-		wlog.log(buff, false);
-		wlog.log(L"\n", false);
-	}
-	else if(status != GL_TRUE) {
-		wlog.log(buff);
-		return cleanup(-5, std::wstring(buff[0], buff[511]));
-	}
+	Shader shader_generate_geom;
+	shader_generate_geom.load_file(GL_GEOMETRY_SHADER, "assets/shaders/generate/shader.geom");
 	process_gl_errors();
 
 	wlog.log(L"Creating and linking generate shader program.\n");
@@ -248,46 +213,13 @@ int main()
 	process_gl_errors();
 
 	wlog.log(L"Creating frustum_culling vertex shader.\n");
-	std::string shader_frustum_culling_vert_source;
-	if(!readfile("assets/shaders/frustum_culling/shader.vert", shader_frustum_culling_vert_source)) {
-		return cleanup(-4, L"assets/shaders/frustum_culling/shader.vert");
-	}
-	GLuint shader_frustum_culling_vert = glCreateShader(GL_VERTEX_SHADER);
-	src = shader_frustum_culling_vert_source.c_str();
-	glShaderSource(shader_frustum_culling_vert, 1, &src, NULL);
-	glCompileShader(shader_frustum_culling_vert);
-	glGetShaderiv(shader_frustum_culling_vert, GL_COMPILE_STATUS, &status);
-	glGetShaderInfoLog(shader_frustum_culling_vert, 512, NULL, buff);
-	if(buff[0] && status == GL_TRUE) {
-		wlog.log(L"Generate vertex shader log:\n");
-		wlog.log(buff, false);
-		wlog.log(L"\n", false);
-	}
-	else if(status != GL_TRUE) {
-		return cleanup(-5, std::wstring(buff[0], buff[511]));
-	}
+	Shader shader_frustum_culling_vert;
+	shader_frustum_culling_vert.load_file(GL_VERTEX_SHADER, "assets/shaders/frustum_culling/shader.vert");
 	process_gl_errors();
 
 	wlog.log(L"Creating frustum_culling geometry shader.\n");
-	std::string shader_frustum_culling_geom_source;
-	if(!readfile("assets/shaders/frustum_culling/shader.geom", shader_frustum_culling_geom_source)) {
-		return cleanup(-4, L"assets/shaders/frustum_culling/shader.geom");
-	}
-	GLuint shader_frustum_culling_geom = glCreateShader(GL_GEOMETRY_SHADER);
-	src = shader_frustum_culling_geom_source.c_str();
-	glShaderSource(shader_frustum_culling_geom, 1, &src, NULL);
-	glCompileShader(shader_frustum_culling_geom);
-	glGetShaderiv(shader_frustum_culling_geom, GL_COMPILE_STATUS, &status);
-	glGetShaderInfoLog(shader_frustum_culling_geom, 512, NULL, buff);
-	if(buff[0] && status == GL_TRUE) {
-		wlog.log(L"Generate geometry shader log:\n");
-		wlog.log(buff, false);
-		wlog.log(L"\n", false);
-	}
-	else if(status != GL_TRUE) {
-		wlog.log(buff);
-		return cleanup(-5, std::wstring(buff[0], buff[511]));
-	}
+	Shader shader_frustum_culling_geom;
+	shader_frustum_culling_geom.load_file(GL_GEOMETRY_SHADER, "assets/shaders/frustum_culling/shader.geom");
 	process_gl_errors();
 
 	wlog.log(L"Creating and linking frustum_culling shader program.\n");
@@ -302,46 +234,13 @@ int main()
 	process_gl_errors();
 	
 	wlog.log(L"Creating render vertex shader.\n");
-	std::string shader_render_vert_source;
-	if(!readfile("assets/shaders/render/shader.vert", shader_render_vert_source)) {
-		return cleanup(-4, L"assets/shaders/render/shader.vert");
-	}
-	GLuint shader_render_vert = glCreateShader(GL_VERTEX_SHADER);
-	src = shader_render_vert_source.c_str();
-	glShaderSource(shader_render_vert, 1, &src, NULL);
-	glCompileShader(shader_render_vert);
-	glGetShaderiv(shader_render_vert, GL_COMPILE_STATUS, &status);
-	glGetShaderInfoLog(shader_render_vert, 512, NULL, buff);
-	if(buff[0] && status == GL_TRUE) {
-		wlog.log(L"Render vertex shader log:\n");
-		wlog.log(buff, false);
-		wlog.log(L"\n", false);
-	}
-	else if(status != GL_TRUE) {
-		return cleanup(-5, std::wstring(buff[0], buff[511]));
-	}
+	Shader shader_render_vert;
+	shader_render_vert.load_file(GL_VERTEX_SHADER, "assets/shaders/render/shader.vert");
 	process_gl_errors();
 
 	wlog.log(L"Creating render fragment shader.\n");
-	std::string shader_render_frag_source;
-	if(!readfile("assets/shaders/render/shader.frag", shader_render_frag_source)) {
-		return cleanup(-4, L"assets/shaders/render/shader.frag");
-	}
-	GLuint shader_render_frag = glCreateShader(GL_FRAGMENT_SHADER);
-	src = shader_render_frag_source.c_str();
-	glShaderSource(shader_render_frag, 1, &src, NULL);
-	glCompileShader(shader_render_frag);
-	glGetShaderiv(shader_render_frag, GL_COMPILE_STATUS, &status);
-	glGetShaderInfoLog(shader_render_frag, 512, NULL, buff);
-	if(buff[0] && status == GL_TRUE) {
-		wlog.log(L"Fragment shader log:\n");
-		wlog.log(buff, false);
-		wlog.log(L"\n", false);
-	}
-	else if(status != GL_TRUE) {
-		return cleanup(-5, std::wstring(buff[0], buff[511]));
-	}
-
+	Shader shader_render_frag;
+	shader_render_frag.load_file(GL_FRAGMENT_SHADER, "assets/shaders/render/shader.frag");
 	process_gl_errors();
 
 	wlog.log(L"Creating and linking render shader program.\n");
@@ -356,45 +255,13 @@ int main()
 	process_gl_errors();
 
 	wlog.log(L"Creating lighting vertex shader.\n");
-	std::string shader_lighting_vert_source;
-	if(!readfile("assets/shaders/lighting/shader.vert", shader_lighting_vert_source)) {
-		return cleanup(-4, L"assets/shaders/lighting/shader.vert");
-	}
-	GLuint shader_lighting_vert = glCreateShader(GL_VERTEX_SHADER);
-	src = shader_lighting_vert_source.c_str();
-	glShaderSource(shader_lighting_vert, 1, &src, NULL);
-	glCompileShader(shader_lighting_vert);
-	glGetShaderiv(shader_lighting_vert, GL_COMPILE_STATUS, &status);
-	glGetShaderInfoLog(shader_lighting_vert, 512, NULL, buff);
-	if(buff[0] && status == GL_TRUE) {
-		wlog.log(L"lighting vertex shader log:\n");
-		wlog.log(buff, false);
-		wlog.log(L"\n", false);
-	}
-	else if(status != GL_TRUE) {
-		return cleanup(-5, std::wstring(buff[0], buff[511]));
-	}
+	Shader shader_lighting_vert;
+	shader_lighting_vert.load_file(GL_VERTEX_SHADER, "assets/shaders/lighting/shader.vert");
 	process_gl_errors();
 
 	wlog.log(L"Creating lighting fragment shader.\n");
-	std::string shader_lighting_frag_source;
-	if(!readfile("assets/shaders/lighting/shader.frag", shader_lighting_frag_source)) {
-		return cleanup(-4, L"assets/shaders/lighting/shader.frag");
-	}
-	GLuint shader_lighting_frag = glCreateShader(GL_FRAGMENT_SHADER);
-	src = shader_lighting_frag_source.c_str();
-	glShaderSource(shader_lighting_frag, 1, &src, NULL);
-	glCompileShader(shader_lighting_frag);
-	glGetShaderiv(shader_lighting_frag, GL_COMPILE_STATUS, &status);
-	glGetShaderInfoLog(shader_lighting_frag, 512, NULL, buff);
-	if(buff[0] && status == GL_TRUE) {
-		wlog.log(L"Fragment shader log:\n");
-		wlog.log(buff, false);
-		wlog.log(L"\n", false);
-	}
-	else if(status != GL_TRUE) {
-		return cleanup(-5, std::wstring(buff[0], buff[511]));
-	}
+	Shader shader_lighting_frag;
+	shader_lighting_frag.load_file(GL_FRAGMENT_SHADER, "assets/shaders/lighting/shader.frag");
 
 	process_gl_errors();
 
@@ -409,46 +276,13 @@ int main()
 	process_gl_errors();
 
 	wlog.log(L"Creating display vertex shader.\n");
-	std::string shader_display_vert_source;
-	if(!readfile("assets/shaders/display/shader.vert", shader_display_vert_source)) {
-		return cleanup(-4, L"assets/shaders/display/shader.vert");
-	}
-	GLuint shader_display_vert = glCreateShader(GL_VERTEX_SHADER);
-	src = shader_display_vert_source.c_str();
-	glShaderSource(shader_display_vert, 1, &src, NULL);
-	glCompileShader(shader_display_vert);
-	glGetShaderiv(shader_display_vert, GL_COMPILE_STATUS, &status);
-	glGetShaderInfoLog(shader_display_vert, 512, NULL, buff);
-	if(buff[0] && status == GL_TRUE) {
-		wlog.log(L"display vertex shader log:\n");
-		wlog.log(buff, false);
-		wlog.log(L"\n", false);
-	}
-	else if(status != GL_TRUE) {
-		return cleanup(-5, std::wstring(buff[0], buff[511]));
-	}
+	Shader shader_display_vert;
+	shader_display_vert.load_file(GL_VERTEX_SHADER, "assets/shaders/display/shader.vert");
 	process_gl_errors();
 
 	wlog.log(L"Creating display fragment shader.\n");
-	std::string shader_display_frag_source;
-	if(!readfile("assets/shaders/display/shader.frag", shader_display_frag_source)) {
-		return cleanup(-4, L"assets/shaders/display/shader.frag");
-	}
-	GLuint shader_display_frag = glCreateShader(GL_FRAGMENT_SHADER);
-	src = shader_display_frag_source.c_str();
-	glShaderSource(shader_display_frag, 1, &src, NULL);
-	glCompileShader(shader_display_frag);
-	glGetShaderiv(shader_display_frag, GL_COMPILE_STATUS, &status);
-	glGetShaderInfoLog(shader_display_frag, 512, NULL, buff);
-	if(buff[0] && status == GL_TRUE) {
-		wlog.log(L"Fragment shader log:\n");
-		wlog.log(buff, false);
-		wlog.log(L"\n", false);
-	}
-	else if(status != GL_TRUE) {
-		return cleanup(-5, std::wstring(buff[0], buff[511]));
-	}
-
+	Shader shader_display_frag;
+	shader_display_frag.load_file(GL_FRAGMENT_SHADER, "assets/shaders/display/shader.frag");
 	process_gl_errors();
 
 	wlog.log(L"Creating and linking display shader program.\n");
@@ -1308,20 +1142,6 @@ int cleanup(int rtval, std::wstring extra)
 	}
 	glfwTerminate();
 	return rtval;
-}
-
-bool readfile(const char* filename, std::string &contents)
-{
-	std::ifstream f(filename);
-	if(!f.good()) {
-		return false;
-	}
-	char c;
-	while((c = f.get()),f.good()) {
-		contents+=c;
-	}
-	f.close();
-	return true;
 }
 
 bool process_gl_errors()
