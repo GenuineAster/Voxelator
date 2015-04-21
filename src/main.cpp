@@ -699,7 +699,7 @@ int main()
 	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, tfo);
 	glGenBuffers(1, &tbo);
 	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, tbo);
-	glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(float)*chunk_total*12*3*components_per_vtx, nullptr, GL_STATIC_DRAW);
+	glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(float)*chunk_total*12*3*components_per_vtx, nullptr, GL_STREAM_COPY);
 
 	uint64_t chunk_total_primitives = 0;
 	uint64_t chunk_total_vertices = 0;
@@ -783,7 +783,7 @@ int main()
 
 			glGenBuffers(1, &chunks[x][y].buffer_geometry);
 			glBindBuffer(GL_COPY_WRITE_BUFFER, chunks[x][y].buffer_geometry);
-			glBufferData(GL_COPY_WRITE_BUFFER, sizeof(float)*primitives*3*components_per_vtx, nullptr, GL_STATIC_DRAW);
+			glBufferData(GL_COPY_WRITE_BUFFER, sizeof(float)*primitives*3*components_per_vtx, nullptr, GL_STATIC_COPY);
 			glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, 0);
 			glBindBuffer(GL_COPY_READ_BUFFER , tbo);
 			glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sizeof(float)*primitives*3*components_per_vtx);
