@@ -8,6 +8,7 @@
 #include "Logger/Logger.hpp"
 #include "Shader/Shader.hpp"
 #include "Program/Program.hpp"
+#include "Util/Util.hpp"
 #include <thread>
 #include <vector>
 #include <sstream>
@@ -22,30 +23,21 @@
 #include "ext/stb/stb_image.h"
 #include "ext/stb/stb_image_write.h"
 
-
-// Common macro for casting OpenGL buffer offsets
-#define BUFFER_OFFSET(i) ((char *)NULL + (i))
-
-constexpr float init_win_size_x = 960.f;
-constexpr float init_win_size_y = 540.f;
-
-constexpr float render_size_x = 3840.f;
-constexpr float render_size_y = 2160.f;
-
-using coord_type = uint8_t;
 using block_id = uint8_t;
+using coord_type = uint8_t;
 
-constexpr GLsizei components_per_vtx = 9;
+constexpr const_vec<float> init_win_size(960.f, 540.f);
+constexpr const_vec<float> render_size(3840.f, 2160.f);
 
 //Specify amount of chunks
-constexpr int32_t   chunks_x=32;
-constexpr int32_t   chunks_y=32;
-constexpr int32_t   chunks_z=0; // Unused for now
+constexpr const_vec<int32_t> num_chunks(32, 32, 1);
 // Specify chunk sizes, chunk_size_*  and chunk_total must be a power of 2.
-constexpr int32_t chunk_size_x=16;
-constexpr int32_t chunk_size_y=16;
-constexpr int32_t chunk_size_z=256;
-constexpr uint64_t   chunk_total =chunk_size_x*chunk_size_y*chunk_size_z;
+constexpr const_vec<int32_t> chunk_size(16, 16, 256);
+constexpr uint64_t chunk_total =chunk_size.x*chunk_size.y*chunk_size.z;
+
+constexpr const_vec<int> block_offset(0, sizeof(coord_type), 2*sizeof(coord_type));
+
+constexpr GLsizei components_per_vtx = 9;
 
 // Camera struct
 struct camera {
@@ -75,7 +67,6 @@ struct block{
 // It also contains its texture ID and an array of block IDs (which go into the
 //    textures)
 struct chunk{
-	static const glm::ivec3 chunk_size;
 	static std::array<block, chunk_total> *offsets;
 	glm::ivec3 position;
 	std::array<block_id, chunk_total> *IDs;
@@ -89,16 +80,9 @@ struct chunk{
 	GLuint vtx_array;
 };
 
-const glm::ivec3 chunk::chunk_size = glm::ivec3(
-	chunk_size_x, chunk_size_y, chunk_size_z
-);
-
 std::array<block, chunk_total> *chunk::offsets = 
 	new std::array<block, chunk_total>;
 
-constexpr int block_offset_x = 0;
-constexpr int block_offset_y = block_offset_x + sizeof(coord_type);
-constexpr int block_offset_z = block_offset_y + sizeof(coord_type);
 
 GLuint framebuffer_display_color_texture;
 
@@ -113,19 +97,19 @@ bool process_gl_errors();
 int main()
 {
 	// Generate chunk_x*chunk_y chunks
-	std::vector<std::vector<chunk>> chunks(chunks_x);
+	std::vector<std::vector<chunk>> chunks(num_chunks.x);
 	for(auto &v : chunks) {
-		v.resize(chunks_y);
+		v.resize(num_chunks.y);
 		for(auto &c : v) {
 			c = chunk();
 		}
 	}
 
 	// Fill chunk offsets with.. their offsets
-	for(int z=0;z<chunk_size_z;++z) {
-		for(int y=0;y<chunk_size_y;++y) {
-			for(int x=0;x<chunk_size_x;++x) {
-				(*chunk::offsets)[z*chunk_size_x*chunk_size_y+y*chunk_size_x+x] = block{x,y,z};
+	for(int z=0;z<chunk_size.z;++z) {
+		for(int y=0;y<chunk_size.y;++y) {
+			for(int x=0;x<chunk_size.x;++x) {
+				(*chunk::offsets)[z*chunk_size.x*chunk_size.y+y*chunk_size.x+x] = block{x,y,z};
 			}
 		}
 	}
@@ -153,7 +137,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 	GLFWwindow *win = glfwCreateWindow(
-		init_win_size_x, init_win_size_y, "Voxelator!", nullptr, nullptr
+		init_win_size.x, init_win_size.y, "Voxelator!", nullptr, nullptr
 	);
 
 	// If window creation fails, exit.
@@ -363,8 +347,8 @@ int main()
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, 0);
 	glTexParameterfv(GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, col);
 	glTexImage3D(
-		GL_TEXTURE_3D, 0, GL_RED, chunk_size_x, chunk_size_y, 
-		chunk_size_z, 0, GL_RED, GL_UNSIGNED_BYTE, 
+		GL_TEXTURE_3D, 0, GL_RED, chunk_size.x, chunk_size.y, 
+		chunk_size.z, 0, GL_RED, GL_UNSIGNED_BYTE, 
 		empty_chunk.IDs->data()
 	);
 	glGenerateMipmap(GL_TEXTURE_3D);
@@ -375,19 +359,18 @@ int main()
 
 	for(unsigned int x=0;x<chunks.size();++x) {
 		for(unsigned int y=0;y<chunks[x].size();++y) {
-			int i = x*chunks[x].size()+y;
 			chunks[x][y].tex = 1;
 			chunks[x][y].texnum = GL_TEXTURE0 + 1;
 			chunks[x][y].IDs = new std::array<block_id, chunk_total>;
 			chunks[x][y].position = glm::vec3(x, y, 0.f);
 
-			for(int _z=0;_z<chunk_size_z;++_z) {
-				for(int _y=0;_y<chunk_size_y;++_y) {
-					for(int _x=0;_x<chunk_size_x;++_x) {
-						int height = abs(_x-(chunk_size_x/2)) 
-						           + abs(_y-(chunk_size_y/2));
-						size_t index = _z*chunk_size_x*chunk_size_y
-						             + _y*chunk_size_x
+			for(int _z=0;_z<chunk_size.z;++_z) {
+				for(int _y=0;_y<chunk_size.y;++_y) {
+					for(int _x=0;_x<chunk_size.x;++_x) {
+						int height = abs(_x-(chunk_size.x/2)) 
+						           + abs(_y-(chunk_size.y/2));
+						size_t index = _z*chunk_size.x*chunk_size.y
+						             + _y*chunk_size.x
 						             + _x;
 						(*chunks[x][y].IDs)[index] =
 							(_z>height)?dist(rd_engine):0;	
@@ -403,8 +386,8 @@ int main()
 			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, 0);
 			glTexParameterfv(GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, col);
 			glTexImage3D(
-				GL_TEXTURE_3D, 0, GL_R8UI, chunk_size_x, chunk_size_y, 
-				chunk_size_z, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, 
+				GL_TEXTURE_3D, 0, GL_R8UI, chunk_size.x, chunk_size.y, 
+				chunk_size.z, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, 
 				chunks[x][y].IDs->data()
 			);
 		}
@@ -445,7 +428,7 @@ int main()
 
 	wlog.log(L"Creating and getting projection uniform data.\n");
 	glm::mat4 projection = glm::perspective(
-		pi/3.f, render_size_x/render_size_y, 0.01f, 3000.0f
+		pi/3.f, render_size.x/render_size.y, 0.01f, 3000.0f
 	);
 	GLint projection_uni = glGetUniformLocation(render_program, "projection");
 	glUniformMatrix4fv(projection_uni, 1, GL_FALSE, glm::value_ptr(projection));
@@ -469,7 +452,7 @@ int main()
 	glUniformMatrix4fv(frustum_proj_uni, 1, GL_FALSE, glm::value_ptr(projection));
 	GLint frustum_chunk_size_uni = glGetUniformLocation(frustum_culling_program, "chunkSize");
 	glUniform3fv(frustum_chunk_size_uni, 1, glm::value_ptr(
-		glm::vec3(chunk_size_x,chunk_size_y,chunk_size_z))
+		glm::vec3(chunk_size.x,chunk_size.y,chunk_size.z))
 	);
 
 	glUseProgram(generate_program);
@@ -489,7 +472,7 @@ int main()
 	wlog.log(L"Creating and setting block chunk size uniform data.\n");
 	GLint chunk_size_uni = glGetUniformLocation(generate_program, "chunkSize");
 	glUniform3fv(chunk_size_uni, 1, glm::value_ptr(
-		glm::vec3(chunk_size_x,chunk_size_y,chunk_size_z))
+		glm::vec3(chunk_size.x,chunk_size.y,chunk_size.z))
 	);
 
 	process_gl_errors();
@@ -546,7 +529,7 @@ int main()
 			// Get neighboring chunks, or set to empty_chunk if none
 			GLint neighbor_tex[6];
 			glActiveTexture(GL_TEXTURE2);
-			if(x<chunks_x-1) {
+			if(x<num_chunks.x-1) {
 				glBindTexture(GL_TEXTURE_3D, chunks[x+1][y].texid);
 				neighbor_tex[0]=2;
 			}
@@ -554,7 +537,7 @@ int main()
 				neighbor_tex[0]=0;
 			}
 			glActiveTexture(GL_TEXTURE3);
-			if(y<chunks_y-1) {
+			if(y<num_chunks.y-1) {
 				glBindTexture(GL_TEXTURE_3D, chunks[x][y+1].texid);
 				neighbor_tex[1]=3;
 			}
@@ -682,7 +665,7 @@ int main()
 	glActiveTexture(GL_TEXTURE0+4);
 	glProgramUniform1i(lighting_program, light_color_uni, 4);
 	glBindTexture(GL_TEXTURE_2D, framebuffer_render_color_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, render_size_x, render_size_y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, render_size.x, render_size.y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer_render_color_texture, 0);
@@ -692,7 +675,7 @@ int main()
 	glActiveTexture(GL_TEXTURE0+5);
 	glProgramUniform1i(lighting_program, light_normals_uni, 5);
 	glBindTexture(GL_TEXTURE_2D, framebuffer_render_normals_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, render_size_x, render_size_y, 0, GL_RG, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, render_size.x, render_size.y, 0, GL_RG, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, framebuffer_render_normals_texture, 0);
@@ -702,7 +685,7 @@ int main()
 	glActiveTexture(GL_TEXTURE0+6);
 	glProgramUniform1i(lighting_program, light_depth_uni, 6);
 	glBindTexture(GL_TEXTURE_2D, framebuffer_render_depth_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, render_size_x, render_size_y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, render_size.x, render_size.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, framebuffer_render_depth_texture, 0);
@@ -723,7 +706,7 @@ int main()
 	glActiveTexture(GL_TEXTURE0+7);
 	glProgramUniform1i(display_program, framebuffer_uni, 7);
 	glBindTexture(GL_TEXTURE_2D, framebuffer_display_color_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, render_size_x, render_size_y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, render_size.x, render_size.y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer_display_color_texture, 0);
@@ -762,7 +745,7 @@ int main()
 	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, fc_tfo);
 	glGenBuffers(1, &fc_tbo);
 	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, fc_tbo);
-	glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(float)*chunks_x*chunks_y*3, nullptr, GL_STREAM_COPY);
+	glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(float)*num_chunks.x*num_chunks.y*3, nullptr, GL_STREAM_COPY);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -777,16 +760,16 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, fc_vbo);
 	glBindVertexArray(fc_vao);
 
-	glm::ivec3 *indices = new glm::ivec3[chunks_x*chunks_y];
-	for(int y=0;y<chunks_y;++y) {
-		for(int x=0;x<chunks_x;++x) {
-			indices[x+y*chunks_x] = glm::ivec3(x, y, 0);
+	glm::ivec3 *indices = new glm::ivec3[num_chunks.x*num_chunks.y];
+	for(int y=0;y<num_chunks.y;++y) {
+		for(int x=0;x<num_chunks.x;++x) {
+			indices[x+y*num_chunks.x] = glm::ivec3(x, y, 0);
 		}
 	}
 
-	glm::ivec3 *visible_indices = new glm::ivec3[chunks_x*chunks_y];
+	glm::ivec3 *visible_indices = new glm::ivec3[num_chunks.x*num_chunks.y];
 
-	glBufferData(GL_ARRAY_BUFFER, sizeof(int)*3*chunks_x*chunks_y, indices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(int)*3*num_chunks.x*num_chunks.y, indices, GL_STATIC_DRAW);
 
 	GLint fc_pos_attrib = glGetAttribLocation(frustum_culling_program, "pos");
 	if(fc_pos_attrib != -1) {
@@ -814,20 +797,20 @@ int main()
 							glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 					} break;
 					case GLFW_KEY_U: {
-						uint8_t *pixels = new uint8_t[static_cast<int>(render_size_x)*static_cast<int>(render_size_y)*4];
+						uint8_t *pixels = new uint8_t[static_cast<int>(render_size.x)*static_cast<int>(render_size.y)*4];
 						glBindTexture(GL_TEXTURE_2D, framebuffer_display_color_texture);
 						glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-						uint8_t *topbottom_pixels = new uint8_t[static_cast<int>(render_size_x)*static_cast<int>(render_size_y)*4];
-						for(int y = 0; y < render_size_y; ++y) {
-							for(int x = 0; x < render_size_x; ++x) {
-								int ny = (render_size_y-1) - y;
-								topbottom_pixels[(x+y*int(render_size_x))*4+0] = pixels[(x+ny*int(render_size_x))*4+0];
-								topbottom_pixels[(x+y*int(render_size_x))*4+1] = pixels[(x+ny*int(render_size_x))*4+1];
-								topbottom_pixels[(x+y*int(render_size_x))*4+2] = pixels[(x+ny*int(render_size_x))*4+2];
-								topbottom_pixels[(x+y*int(render_size_x))*4+3] = pixels[(x+ny*int(render_size_x))*4+3];
+						uint8_t *topbottom_pixels = new uint8_t[static_cast<int>(render_size.x)*static_cast<int>(render_size.y)*4];
+						for(int y = 0; y < render_size.y; ++y) {
+							for(int x = 0; x < render_size.x; ++x) {
+								int ny = (render_size.y-1) - y;
+								topbottom_pixels[(x+y*int(render_size.x))*4+0] = pixels[(x+ny*int(render_size.x))*4+0];
+								topbottom_pixels[(x+y*int(render_size.x))*4+1] = pixels[(x+ny*int(render_size.x))*4+1];
+								topbottom_pixels[(x+y*int(render_size.x))*4+2] = pixels[(x+ny*int(render_size.x))*4+2];
+								topbottom_pixels[(x+y*int(render_size.x))*4+3] = pixels[(x+ny*int(render_size.x))*4+3];
 							}
 						}
-						if(!stbi_write_png("/tmp/screenshot.png", render_size_x, render_size_y, 4, topbottom_pixels, 0)) {
+						if(!stbi_write_png("/tmp/screenshot.png", render_size.x, render_size.y, 4, topbottom_pixels, 0)) {
 							wlog.log(L"ERROR SAVING SCREENSHOT!\n");
 						}
 						else {
@@ -848,7 +831,7 @@ int main()
 	long long cnt=0;
 	long double ft_total=0.f;
 
-	cam.position = glm::vec3(chunks_x*chunk_size_x/2.f, chunks_y*chunk_size_y/2.f, 0.f);
+	cam.position = glm::vec3(num_chunks.x*chunk_size.x/2.f, num_chunks.y*chunk_size.y/2.f, 0.f);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -987,7 +970,7 @@ int main()
 
 		glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, fc_query);
 		glBeginTransformFeedback(GL_POINTS);
-			glDrawArrays(GL_POINTS, 0, chunks_x*chunks_y);
+			glDrawArrays(GL_POINTS, 0, num_chunks.x*num_chunks.y);
 		glEndTransformFeedback();
 		glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
 
@@ -1008,7 +991,7 @@ int main()
 
 
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_render);
-		glViewport(0.f, 0.f, render_size_x, render_size_y);
+		glViewport(0.f, 0.f, render_size.x, render_size.y);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
@@ -1018,7 +1001,7 @@ int main()
 			glm::mat4 transform;
 			transform = glm::translate(
 				transform,
-				glm::vec3(chunk::chunk_size)*
+				glm::vec3(chunk_size.x, chunk_size.y, chunk_size.z)*
 				glm::vec3(chunks[x][y].position)
 			);
 			glUniformMatrix4fv(
