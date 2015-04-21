@@ -394,8 +394,8 @@ int main()
 	for(unsigned int x=0;x<chunks.size();++x) {
 		for(unsigned int y=0;y<chunks[x].size();++y) {
 			int i = x*chunks[x].size()+y;
-			chunks[x][y].tex = 1+i;
-			chunks[x][y].texnum = GL_TEXTURE0 + 1 + i;
+			chunks[x][y].tex = 1;
+			chunks[x][y].texnum = GL_TEXTURE0 + 1;
 			chunks[x][y].IDs = new std::array<block_id, chunk_total>;
 			chunks[x][y].position = glm::vec3(x, y, 0.f);
 
@@ -533,7 +533,7 @@ int main()
 	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, tfo);
 	glGenBuffers(1, &tbo);
 	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, tbo);
-	glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(float)*chunk_total*12*3*components_per_vtx, nullptr, GL_STATIC_DRAW);
+	glBufferData(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(float)*chunk_total*12*3*components_per_vtx, nullptr, GL_STREAM_COPY);
 
 	uint64_t chunk_total_primitives = 0;
 	uint64_t chunk_total_vertices = 0;
@@ -617,7 +617,7 @@ int main()
 
 			glGenBuffers(1, &chunks[x][y].buffer_geometry);
 			glBindBuffer(GL_COPY_WRITE_BUFFER, chunks[x][y].buffer_geometry);
-			glBufferData(GL_COPY_WRITE_BUFFER, sizeof(float)*primitives*3*components_per_vtx, nullptr, GL_STATIC_DRAW);
+			glBufferData(GL_COPY_WRITE_BUFFER, sizeof(float)*primitives*3*components_per_vtx, nullptr, GL_STATIC_COPY);
 			glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, 0);
 			glBindBuffer(GL_COPY_READ_BUFFER , tbo);
 			glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sizeof(float)*primitives*3*components_per_vtx);
