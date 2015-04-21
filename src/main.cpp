@@ -1,9 +1,3 @@
-
-// For gnu::unused attribute
-#ifndef __GNUC__
-	#define gnu::
-#endif
-
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
@@ -143,8 +137,8 @@ int main()
 		return cleanup(-1);
 
 	glfwSetErrorCallback(
-		[]([[gnu::unused]] int a, const char* b){
-			wlog.log(std::wstring{b, b+std::strlen(b)}+L"\n");
+		[](int, const char* msg){
+			wlog.log(std::wstring{msg, msg+std::strlen(msg)}+L"\n");
 		}
 	);
 
