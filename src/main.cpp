@@ -560,8 +560,8 @@ int main()
 	for(unsigned int x=0;x<chunks.size();++x) {
 		for(unsigned int y=0;y<chunks[x].size();++y) {
 			int i = x*chunks[x].size()+y;
-			chunks[x][y].tex = 1+i;
-			chunks[x][y].texnum = GL_TEXTURE0 + 1 + i;
+			chunks[x][y].tex = 1;
+			chunks[x][y].texnum = GL_TEXTURE0 + 1;
 			chunks[x][y].IDs = new std::array<block_id, chunk_total>;
 			chunks[x][y].position = glm::vec3(x, y, 0.f);
 
