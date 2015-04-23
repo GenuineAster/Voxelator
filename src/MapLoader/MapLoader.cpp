@@ -22,7 +22,7 @@ void MapLoader::load(std::string filename) {
 	for(int loc=0;loc<1024;++loc) {
 		int tmp;
 		file.read(reinterpret_cast<char*>(&tmp), 4);
-		locations.table[loc].size = (tmp>>24)*4096;//(tmp&0xFF)*4096;
+		locations.table[loc].size = (tmp>>24)*4096;
 		locations.table[loc].offset = (invert_endian(tmp&0xFFFFFF)>>8)*4096;
 	}
 	// Parse Timestamp Table
@@ -53,23 +53,20 @@ void MapLoader::load(std::string filename) {
 		chunks[i].data = new uint8_t[locations.table[i].size];
 		file.seekg(locations.table[i].offset);
 		file.read(reinterpret_cast<char*>(chunks[i].data), locations.table[i].size);
+
 		uint32_t length = invert_endian(*reinterpret_cast<uint32_t*>(chunks[i].data));
 		uint8_t  compression = chunks[i].data[4];
 		if(compression == 2) {
-			uint8_t *uncompressed_data = new uint8_t[length];
-			uLongf len = length;
+			uLongf len = length*20;
+			uint8_t *uncompressed_data = new uint8_t[len];
 			uncompress(
 				uncompressed_data,
 				&len,
 				const_cast<const uint8_t*>(&chunks[i].data[5]),
-				locations.table[i].size-4
+				length-1
 			);
-			if(i==0) {
-				for(int pos=0;pos<len;++pos) {
-					
-				}
-			}
 			auto tag = parse_nbt(uncompressed_data, len, 0);
+			delete[] uncompressed_data;
 		}
 	}
 

@@ -9,6 +9,7 @@
 #include "Shader/Shader.hpp"
 #include "Program/Program.hpp"
 #include "Util/Util.hpp"
+#include "MapLoader/MapLoader.hpp"
 #include <thread>
 #include <vector>
 #include <sstream>
@@ -96,6 +97,10 @@ bool process_gl_errors();
 
 int main()
 {
+	{
+		MapLoader map;
+		map.load("./assets/minecraft/region/r.0.0.mca");
+	}
 	// Generate chunk_x*chunk_y chunks
 	std::vector<std::vector<chunk>> chunks(num_chunks.x);
 	for(auto &v : chunks) {

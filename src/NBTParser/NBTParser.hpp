@@ -91,7 +91,7 @@ namespace Tags {
 
 	class Compound : public Tag {
 	public:
-		std::vector<Tag*> data;
+		std::vector<Tags::Tag*> data;
 		const Type type = Type::COMPOUND;
 		Compound();
 		~Compound();
@@ -99,7 +99,7 @@ namespace Tags {
 
 	class Int_Array : public Tag {
 	public:
-		std::vector<int32_t> data;
+		std::vector<Tags::Int> data;
 		const Type type = Type::INT_ARRAY;
 	};
 }
