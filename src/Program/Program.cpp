@@ -19,7 +19,7 @@ void Program::use() {
 
 void Program::transform_feedback_varyings(std::vector<std::string> varyings, GLenum attrib_mode) {
 	const char *cvaryings[varyings.size()];
-	for(int i=0;i<varyings.size();++i) {
+	for(unsigned int i=0;i<varyings.size();++i) {
 		cvaryings[i] = varyings[i].c_str();
 	}
 	glTransformFeedbackVaryings(m_program, varyings.size(), cvaryings, attrib_mode);
