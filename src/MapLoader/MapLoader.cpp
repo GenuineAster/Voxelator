@@ -60,7 +60,7 @@ void MapLoader::load(std::string filename) {
 		uint32_t length = invert_endian(*reinterpret_cast<uint32_t*>(chunks[i].data));
 		uint8_t  compression = chunks[i].data[4];
 		if(compression == 2) {
-			uLongf len = length*20;
+			uLongf len = length*50;
 			uint8_t *uncompressed_data = new uint8_t[len];
 			uncompress(
 				uncompressed_data,
