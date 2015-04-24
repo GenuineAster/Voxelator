@@ -2,6 +2,7 @@
 #define MAP_LOADER
 
 #include <string>
+#include <vector>
 
 namespace MC {
 	struct Location {
@@ -16,16 +17,17 @@ namespace MC {
 	};
 	struct Chunk {
 		uint8_t *data;
+		std::vector<uint8_t> blocks;
+		bool loaded;
 	};
 }
 
 class MapLoader
 {
-private:
+public:
 	MC::LocationTable locations;
 	MC::TimestampTable times;
 	MC::Chunk chunks[32*32];
-public:
 	void load(std::string filename);
 	MapLoader();
 	~MapLoader();

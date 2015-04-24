@@ -97,10 +97,9 @@ bool process_gl_errors();
 
 int main()
 {
-	{
-		MapLoader map;
-		map.load("./assets/minecraft/region/r.0.0.mca");
-	}
+	MapLoader map;
+	map.load("./assets/minecraft/region/r.0.0.mca");
+
 	// Generate chunk_x*chunk_y chunks
 	std::vector<std::vector<chunk>> chunks(num_chunks.x);
 	for(auto &v : chunks) {
@@ -369,16 +368,31 @@ int main()
 			chunks[x][y].IDs = new std::array<block_id, chunk_total>;
 			chunks[x][y].position = glm::vec3(x, y, 0.f);
 
-			for(int _z=0;_z<chunk_size.z;++_z) {
-				for(int _y=0;_y<chunk_size.y;++_y) {
-					for(int _x=0;_x<chunk_size.x;++_x) {
-						int height = abs(_x-(chunk_size.x/2)) 
-						           + abs(_y-(chunk_size.y/2));
-						size_t index = _z*chunk_size.x*chunk_size.y
+			if(x < 32 && y < 32 && map.chunks[y*32+x].loaded) {
+				for(int _z=0;_z<chunk_size.z;++_z) {
+					for(int _y=0;_y<chunk_size.y;++_y) {
+						for(int _x=0;_x<chunk_size.x;++_x) {
+							size_t index = _z*chunk_size.x*chunk_size.y
 						             + _y*chunk_size.x
 						             + _x;
-						(*chunks[x][y].IDs)[index] =
-							(_z>height)?dist(rd_engine):0;	
+						    (*chunks[x][y].IDs)[index] = map.chunks[y*32+x].blocks[index];
+						}
+					}
+				}
+			}
+
+			else {
+				for(int _z=0;_z<chunk_size.z;++_z) {
+					for(int _y=0;_y<chunk_size.y;++_y) {
+						for(int _x=0;_x<chunk_size.x;++_x) {
+							int height = abs(_x-(chunk_size.x/2)) 
+							           + abs(_y-(chunk_size.y/2));
+							size_t index = _z*chunk_size.x*chunk_size.y
+							             + _y*chunk_size.x
+							             + _x;
+							(*chunks[x][y].IDs)[index] =
+								(_z>height)?dist(rd_engine):0;
+						}
 					}
 				}
 			}

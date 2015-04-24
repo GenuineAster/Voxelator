@@ -48,6 +48,9 @@ void MapLoader::load(std::string filename) {
 	std::cout<<"Filesize was "<<max<<std::endl;
 
 	for(int i=0;i<1024;++i) {
+		chunks[i].loaded=false;
+		if(locations.table[i].offset == 0)
+			continue;
 		if(locations.table[i].size == 0)
 			continue;
 		chunks[i].data = new uint8_t[locations.table[i].size];
@@ -67,6 +70,46 @@ void MapLoader::load(std::string filename) {
 			);
 			auto tag = parse_nbt(uncompressed_data, len, 0);
 			delete[] uncompressed_data;
+
+			std::shared_ptr<Tags::Compound> level = std::static_pointer_cast<Tags::Compound>(tag->data[0]);
+			std::shared_ptr<Tags::List> sections;
+
+
+			try {
+				sections = std::static_pointer_cast<Tags::List>((*level)["Sections"]);
+			} catch(int e) {
+				continue;
+			}
+			
+			chunks[i].blocks.resize(16*16*256);
+			for(auto &block : chunks[i].blocks)
+				block = 0;
+			chunks[i].loaded = true;
+
+			for(auto &t : sections->data) {
+				std::shared_ptr<Tags::Compound> section = std::static_pointer_cast<Tags::Compound>(t);
+				uint32_t y;
+				std::vector<Tags::Byte> *blocks;
+				try {
+					y = static_cast<uint32_t>(std::static_pointer_cast<Tags::Byte>((*section)["Y"])->data);
+					blocks = &(std::static_pointer_cast<Tags::Byte_Array>((*section)["Blocks"])->data);
+				} catch (int e) {
+					continue;
+				}
+
+				size_t offset = ((15-y)*16*16*16);
+
+				for(uint32_t _z=0;_z<16;++_z) {
+					for(uint32_t _y=0;_y<16;++_y) {
+						for(uint32_t _x=0;_x<16;++_x) {
+							size_t index_vox = offset+((15-_y)*16*16+_z*16+_x);
+							size_t index_mca = _y*16*16+_z*16+_x;
+								chunks[i].blocks[index_vox] = (*blocks)[index_mca].data;
+						}
+					}
+				}
+			}
+
 		}
 	}
 
