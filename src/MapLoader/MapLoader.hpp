@@ -20,15 +20,18 @@ namespace MC {
 		std::vector<uint8_t> blocks;
 		bool loaded;
 	};
+	struct Region {
+		MC::LocationTable locations;
+		MC::TimestampTable times;
+		Chunk chunks[1024];
+	};
 }
 
 class MapLoader
 {
 public:
-	MC::LocationTable locations;
-	MC::TimestampTable times;
-	MC::Chunk chunks[32*32];
-	void load(std::string filename);
+	std::vector<std::vector<MC::Region>> regions;
+	void load(std::string filename, int offset_x, int offset_y);
 	MapLoader();
 	~MapLoader();
 };

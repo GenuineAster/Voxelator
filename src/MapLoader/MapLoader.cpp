@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <cmath>
 #include <zlib.h>
 #include <NBTParser/NBTParser.hpp>
 
@@ -14,7 +15,15 @@ T invert_endian(T a) {
 	return result;
 }
 
-void MapLoader::load(std::string filename) {
+void MapLoader::load(std::string filename, int offsetx, int offsety) {
+	// if(offsetx+1>regions.size())
+		regions.resize(10);
+	// if(offsety+1>regions[0].size()) {
+		for(auto &chunk : regions) {
+			chunk.resize(10);
+		}
+	// }
+
 	std::ifstream file(filename, std::ios::binary | std::ios::in);
 	if(!file.is_open())
 		return;
@@ -22,28 +31,27 @@ void MapLoader::load(std::string filename) {
 	for(int loc=0;loc<1024;++loc) {
 		int tmp;
 		file.read(reinterpret_cast<char*>(&tmp), 4);
-		locations.table[loc].size = (tmp>>24)*4096;
-		locations.table[loc].offset = (invert_endian(tmp&0xFFFFFF)>>8)*4096;
+		regions[offsetx][offsety].locations.table[loc].size = (tmp>>24)*4096;
+		regions[offsetx][offsety].locations.table[loc].offset = (invert_endian(tmp&0xFFFFFF)>>8)*4096;
 	}
 	// Parse Timestamp Table
 	for(int t=0;t<1024;++t) {
 		int tmp;
 		file.read(reinterpret_cast<char*>(&tmp), 4);
 		tmp = invert_endian(tmp);
-		times.times[t] = tmp;
+		regions[offsetx][offsety].times.times[t] = tmp;
 	}
 
 	unsigned int max=0;
 	for(int i=0;i<1024;++i) {
-		if(times.times[i] > max)
-			max = times.times[i];
+		if(regions[offsetx][offsety].times.times[i] > max)
+			max = regions[offsetx][offsety].times.times[i];
 	}
 	std::cout<<"Largest timestamp was "<<max<<std::endl;
 
 	max = 0;
 	for(int i=0;i<1024;++i) {
-		if((locations.table[i].offset)+(locations.table[i].size) > max)
-			max = (locations.table[i].offset)+(locations.table[i].size);
+		max = std::max((regions[offsetx][offsety].locations.table[i].offset)+(regions[offsetx][offsety].locations.table[i].size), max);
 	}
 	std::cout<<"Filesize was "<<max<<std::endl;
 
@@ -51,14 +59,14 @@ void MapLoader::load(std::string filename) {
 	std::vector<uint8_t> uncompressed_data(4*1024*1024);
 
 	for(int i=0;i<1024;++i) {
-		chunks[i].loaded=false;
-		if(locations.table[i].offset == 0)
+		regions[offsetx][offsety].chunks[i].loaded=false;
+		if(regions[offsetx][offsety].locations.table[i].offset == 0)
 			continue;
-		if(locations.table[i].size == 0)
+		if(regions[offsetx][offsety].locations.table[i].size == 0)
 			continue;
 		// chunks[i].data.resize(locations.table[i].size);
-		file.seekg(locations.table[i].offset);
-		file.read(reinterpret_cast<char*>(compressed_data.data()), locations.table[i].size);
+		file.seekg(regions[offsetx][offsety].locations.table[i].offset);
+		file.read(reinterpret_cast<char*>(compressed_data.data()), regions[offsetx][offsety].locations.table[i].size);
 
 		uint32_t length = invert_endian(*reinterpret_cast<uint32_t*>(compressed_data.data()));
 		uint8_t  compression = compressed_data[4];
@@ -82,10 +90,10 @@ void MapLoader::load(std::string filename) {
 				continue;
 			}
 			
-			chunks[i].blocks.resize(16*16*256);
-			for(auto &block : chunks[i].blocks)
+			regions[offsetx][offsety].chunks[i].blocks.resize(16*16*256);
+			for(auto &block : regions[offsetx][offsety].chunks[i].blocks)
 				block = 0;
-			chunks[i].loaded = true;
+			regions[offsetx][offsety].chunks[i].loaded = true;
 
 			for(auto &t : sections->data) {
 				std::shared_ptr<Tags::Compound> section = std::static_pointer_cast<Tags::Compound>(t);
@@ -105,14 +113,13 @@ void MapLoader::load(std::string filename) {
 						for(uint32_t _x=0;_x<16;++_x) {
 							size_t index_vox = offset+((15-_y)*16*16+_z*16+_x);
 							size_t index_mca = _y*16*16+_z*16+_x;
-								chunks[i].blocks[index_vox] = (*blocks)[index_mca].data;
+								regions[offsetx][offsety].chunks[i].blocks[index_vox] = (*blocks)[index_mca].data;
 						}
 					}
 				}
 			}
-
+			// chunks[i].data.clear();
 		}
-		// chunks[i].data.clear();
 	}
 	uncompressed_data.clear();
 	compressed_data.clear();

@@ -31,7 +31,7 @@ constexpr const_vec<float> init_win_size(960.f, 540.f);
 constexpr const_vec<float> render_size(3840.f, 2160.f);
 
 //Specify amount of chunks
-constexpr const_vec<int32_t> num_chunks(32, 32, 1);
+constexpr const_vec<int32_t> num_chunks(64, 64, 1);
 // Specify chunk sizes, chunk_size_*  and chunk_total must be a power of 2.
 constexpr const_vec<int32_t> chunk_size(16, 16, 256);
 constexpr uint64_t chunk_total =chunk_size.x*chunk_size.y*chunk_size.z;
@@ -360,7 +360,14 @@ int main()
 	wlog.log(L"Loading maps.\n");
 
 	MapLoader map;
-	map.load("./assets/minecraft/region/r.0.0.mca");
+	map.load("./assets/minecraft/region/r.0.0.mca", 0, 0);
+	wlog.log(L"Loaded map (0,0).\n");
+	map.load("./assets/minecraft/region/r.1.0.mca", 1, 0);
+	wlog.log(L"Loaded map (1,0).\n");
+	map.load("./assets/minecraft/region/r.0.1.mca", 0, 1);
+	wlog.log(L"Loaded map (0,1).\n");
+	map.load("./assets/minecraft/region/r.1.1.mca", 1, 1);
+	wlog.log(L"Loaded map (1,1).\n");
 
 	wlog.log(L"Creating Chunk Info Textures.\n");
 
@@ -370,8 +377,8 @@ int main()
 			chunks[x][y].texnum = GL_TEXTURE0 + 1;
 			chunks[x][y].position = glm::vec3(x, y, 0.f);
 
-			if(x < 32 && y < 32 && map.chunks[y*32+x].loaded) {
-				chunks[x][y].IDs = &map.chunks[y*32+x].blocks;
+			if(map.regions[x/32][y/32].chunks[(y%32)*32+(x%32)].loaded) {
+				chunks[x][y].IDs = &map.regions[x/32][y/32].chunks[(y%32)*32+(x%32)].blocks;
 			}
 
 			else {
