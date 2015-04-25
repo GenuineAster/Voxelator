@@ -279,7 +279,7 @@ int main()
 	glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, col);
 	int spritesheet_x, spritesheet_y, spritesheet_n;
 	unsigned char *spritesheet_data = stbi_load(
-		"assets/images/spritesheet2a.png", &spritesheet_x, &spritesheet_y,
+		"assets/images/minecraft.png", &spritesheet_x, &spritesheet_y,
 		&spritesheet_n, 4
 	);
 	wlog.log(
