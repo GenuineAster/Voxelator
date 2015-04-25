@@ -70,7 +70,7 @@ struct block{
 struct chunk{
 	static std::array<block, chunk_total> *offsets;
 	glm::ivec3 position;
-	std::array<block_id, chunk_total> *IDs;
+	std::vector<block_id> *IDs;
 	GLenum texnum;
 	GLuint texid;
 	GLuint tex;
@@ -97,8 +97,6 @@ bool process_gl_errors();
 
 int main()
 {
-	MapLoader map;
-	map.load("./assets/minecraft/region/r.0.0.mca");
 
 	// Generate chunk_x*chunk_y chunks
 	std::vector<std::vector<chunk>> chunks(num_chunks.x);
@@ -331,16 +329,14 @@ int main()
 	);
 	process_gl_errors();
 
-	wlog.log(L"Creating Chunk Info Textures.\n");
-
 	chunk empty_chunk;
 	empty_chunk.buffer_geometry=-1;
 	empty_chunk.component_count=-1;
 	empty_chunk.primitive_count=-1;
 	empty_chunk.vertex_count=-1;
 	empty_chunk.vtx_array=-1;
-	empty_chunk.IDs = new std::array<block_id, chunk_total>;
-	empty_chunk.IDs->fill(0);
+	empty_chunk.IDs = new std::vector<block_id>(chunk_total);
+	std::fill(empty_chunk.IDs->begin(), empty_chunk.IDs->end(), 0);
 	empty_chunk.tex = 0;
 	empty_chunk.texnum = GL_TEXTURE0;
 	glActiveTexture(empty_chunk.texnum);
@@ -361,27 +357,25 @@ int main()
 	std::default_random_engine rd_engine(rd());
 	std::uniform_int_distribution<int> dist(1,n_sprites);
 
+	wlog.log(L"Loading maps.\n");
+
+	MapLoader map;
+	map.load("./assets/minecraft/region/r.0.0.mca");
+
+	wlog.log(L"Creating Chunk Info Textures.\n");
+
 	for(unsigned int x=0;x<chunks.size();++x) {
 		for(unsigned int y=0;y<chunks[x].size();++y) {
 			chunks[x][y].tex = 1;
 			chunks[x][y].texnum = GL_TEXTURE0 + 1;
-			chunks[x][y].IDs = new std::array<block_id, chunk_total>;
 			chunks[x][y].position = glm::vec3(x, y, 0.f);
 
 			if(x < 32 && y < 32 && map.chunks[y*32+x].loaded) {
-				for(int _z=0;_z<chunk_size.z;++_z) {
-					for(int _y=0;_y<chunk_size.y;++_y) {
-						for(int _x=0;_x<chunk_size.x;++_x) {
-							size_t index = _z*chunk_size.x*chunk_size.y
-						             + _y*chunk_size.x
-						             + _x;
-						    (*chunks[x][y].IDs)[index] = map.chunks[y*32+x].blocks[index];
-						}
-					}
-				}
+				chunks[x][y].IDs = &map.chunks[y*32+x].blocks;
 			}
 
 			else {
+				chunks[x][y].IDs = new std::vector<block_id>(chunk_total);
 				for(int _z=0;_z<chunk_size.z;++_z) {
 					for(int _y=0;_y<chunk_size.y;++_y) {
 						for(int _x=0;_x<chunk_size.x;++_x) {
@@ -779,16 +773,16 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, fc_vbo);
 	glBindVertexArray(fc_vao);
 
-	glm::ivec3 *indices = new glm::ivec3[num_chunks.x*num_chunks.y];
+	std::vector<glm::ivec3> indices(num_chunks.x*num_chunks.y);
 	for(int y=0;y<num_chunks.y;++y) {
 		for(int x=0;x<num_chunks.x;++x) {
 			indices[x+y*num_chunks.x] = glm::ivec3(x, y, 0);
 		}
 	}
 
-	glm::ivec3 *visible_indices = new glm::ivec3[num_chunks.x*num_chunks.y];
+	std::vector<glm::ivec3> visible_indices(num_chunks.x*num_chunks.y);
 
-	glBufferData(GL_ARRAY_BUFFER, sizeof(int)*3*num_chunks.x*num_chunks.y, indices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(int)*3*num_chunks.x*num_chunks.y, indices.data(), GL_STATIC_DRAW);
 
 	GLint fc_pos_attrib = glGetAttribLocation(frustum_culling_program, "pos");
 	if(fc_pos_attrib != -1) {
@@ -997,7 +991,7 @@ int main()
 
 		glGetQueryObjectuiv(fc_query, GL_QUERY_RESULT, &fc_primitives);
 
-		glGetBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, 0, fc_primitives*sizeof(int)*3, visible_indices);
+		glGetBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, 0, fc_primitives*sizeof(int)*3, visible_indices.data());
 
 		glUseProgram(render_program);
 
@@ -1075,7 +1069,6 @@ int main()
 			glDeleteTextures(1, &(chunks[x][y].texid));
 			glDeleteBuffers(1, &(chunks[x][y].buffer_geometry));
 			glDeleteVertexArrays(1, &(chunks[x][y].vtx_array));
-			delete chunks[x][y].IDs;
 		}
 	}
 

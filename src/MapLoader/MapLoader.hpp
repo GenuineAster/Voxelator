@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 namespace MC {
 	struct Location {
@@ -16,7 +17,6 @@ namespace MC {
 		uint32_t times[1024];
 	};
 	struct Chunk {
-		uint8_t *data;
 		std::vector<uint8_t> blocks;
 		bool loaded;
 	};

@@ -47,29 +47,30 @@ void MapLoader::load(std::string filename) {
 	}
 	std::cout<<"Filesize was "<<max<<std::endl;
 
+	std::vector<uint8_t> compressed_data(4*1024*1024);
+	std::vector<uint8_t> uncompressed_data(4*1024*1024);
+
 	for(int i=0;i<1024;++i) {
 		chunks[i].loaded=false;
 		if(locations.table[i].offset == 0)
 			continue;
 		if(locations.table[i].size == 0)
 			continue;
-		chunks[i].data = new uint8_t[locations.table[i].size];
+		// chunks[i].data.resize(locations.table[i].size);
 		file.seekg(locations.table[i].offset);
-		file.read(reinterpret_cast<char*>(chunks[i].data), locations.table[i].size);
+		file.read(reinterpret_cast<char*>(compressed_data.data()), locations.table[i].size);
 
-		uint32_t length = invert_endian(*reinterpret_cast<uint32_t*>(chunks[i].data));
-		uint8_t  compression = chunks[i].data[4];
+		uint32_t length = invert_endian(*reinterpret_cast<uint32_t*>(compressed_data.data()));
+		uint8_t  compression = compressed_data[4];
 		if(compression == 2) {
-			uLongf len = length*50;
-			uint8_t *uncompressed_data = new uint8_t[len];
+			uLongf len = uncompressed_data.size();
 			uncompress(
-				uncompressed_data,
+				uncompressed_data.data(),
 				&len,
-				const_cast<const uint8_t*>(&chunks[i].data[5]),
+				const_cast<const uint8_t*>(&(compressed_data[5])),
 				length-1
 			);
-			auto tag = parse_nbt(uncompressed_data, len, 0);
-			delete[] uncompressed_data;
+			auto tag = parse_nbt(uncompressed_data.data(), len, 0);
 
 			std::shared_ptr<Tags::Compound> level = std::static_pointer_cast<Tags::Compound>(tag->data[0]);
 			std::shared_ptr<Tags::List> sections;
@@ -111,7 +112,10 @@ void MapLoader::load(std::string filename) {
 			}
 
 		}
+		// chunks[i].data.clear();
 	}
+	uncompressed_data.clear();
+	compressed_data.clear();
 
 	file.close();
 }
