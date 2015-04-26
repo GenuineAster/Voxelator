@@ -73,7 +73,7 @@ void main()
 	vec3 Normal = vec3(texture(normalsTex, vTexcoords));
 	Normal.z = -sqrt(1-(Normal.x*Normal.x + Normal.y*Normal.y));
 
-	float ao_sample_rad = 0.3;
+	float ao_sample_rad = 0.09;
 
 	const vec2 vec[4] = {vec2(1,0),vec2(-1,0), vec2(0,1),vec2(0,-1)};
 
@@ -82,7 +82,7 @@ void main()
 	float ao = 0.0f;
 	float rad = ao_sample_rad/Position.z;
 
-	int iterations = 3;
+	int iterations = 4;
 	for (int j = 0; j < iterations; ++j)
 	{
 		vec2 coord1 = reflect(vec[j],r)*rad;
@@ -104,5 +104,5 @@ void main()
 	// Mix colors
 	outCol = texture(colorTex, vTexcoords);
 	outCol.rgb *= 1.0-ao;
-	outCol.rgb *= brightness;
+	// outCol.rgb *= brightness;
 }
