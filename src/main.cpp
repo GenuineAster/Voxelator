@@ -465,6 +465,11 @@ int main()
 	GLint light_proj_uni = glGetUniformLocation(lighting_program, "projection");
 	glUniformMatrix4fv(light_proj_uni, 1, GL_FALSE, glm::value_ptr(projection));
 
+	GLint light_intensity_uni = glGetUniformLocation(lighting_program, "intensity");
+	GLint light_bias_uni = glGetUniformLocation(lighting_program, "bias");
+	GLint light_rad_uni = glGetUniformLocation(lighting_program, "sample_radius");
+	GLint light_scale_uni = glGetUniformLocation(lighting_program, "scale");
+
 	glUseProgram(frustum_culling_program);
 
 	GLint frustum_view_uni = glGetUniformLocation(frustum_culling_program, "view");
@@ -855,6 +860,11 @@ int main()
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
+	float intensity = 1.0;
+	float bias = 0.2;
+	float scale = 0.5;
+	float sample_radius = 0.23;
+
 	while(!glfwWindowShouldClose(win)) {
 		end = std::chrono::high_resolution_clock::now();
 		long int ft = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -885,6 +895,10 @@ int main()
 			wlog.log(frametimestr);
 			cnt=0;
 			ft_total=0.L;
+			wlog.log(L"SSAO Intensity : \t" + std::to_wstring(intensity) + L"\n");
+			wlog.log(L"SSAO Bias : \t" + std::to_wstring(bias) + L"\n");
+			wlog.log(L"SSAO Scale : \t" + std::to_wstring(scale) + L"\n");
+			wlog.log(L"SSAO Sample Radius : \t" + std::to_wstring(sample_radius) + L"\n");
 		}
 		start=end;
 
@@ -973,6 +987,39 @@ int main()
 		}
 		if(glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL)) {
 			cam.position += -glm::normalize(cam.up)*fts_float*100.f;
+		}
+
+		if(glfwGetKey(win, GLFW_KEY_G)) {
+			intensity += 0.01;
+			glProgramUniform1f(lighting_program, light_intensity_uni, intensity);
+		}
+		if(glfwGetKey(win, GLFW_KEY_V)) {
+			intensity -= 0.01;
+			glProgramUniform1f(lighting_program, light_intensity_uni, intensity);
+		}
+		if(glfwGetKey(win, GLFW_KEY_H)) {
+			bias += 0.01;
+			glProgramUniform1f(lighting_program, light_bias_uni, bias);
+		}
+		if(glfwGetKey(win, GLFW_KEY_B)) {
+			bias -= 0.01;
+			glProgramUniform1f(lighting_program, light_bias_uni, bias);
+		}
+		if(glfwGetKey(win, GLFW_KEY_J)) {
+			sample_radius += 0.01;
+			glProgramUniform1f(lighting_program, light_rad_uni, sample_radius);
+		}
+		if(glfwGetKey(win, GLFW_KEY_N)) {
+			sample_radius -= 0.01;
+			glProgramUniform1f(lighting_program, light_rad_uni, sample_radius);
+		}
+		if(glfwGetKey(win, GLFW_KEY_K)) {
+			scale += 0.01;
+			glProgramUniform1f(lighting_program, light_scale_uni, scale);
+		}
+		if(glfwGetKey(win, GLFW_KEY_M)) {
+			scale -= 0.01;
+			glProgramUniform1f(lighting_program, light_scale_uni, scale);
 		}
 
 		glUseProgram(frustum_culling_program);

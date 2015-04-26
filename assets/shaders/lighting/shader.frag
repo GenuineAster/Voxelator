@@ -9,7 +9,10 @@ in mat4 inverseProjection;
 uniform sampler2D normalsTex;
 uniform sampler2D colorTex;
 uniform sampler2D depthTex;
-
+uniform float intensity = 1.0;
+uniform float bias = 0.2;
+uniform float scale = 0.5;
+uniform float sample_radius = 0.23;
 
 out vec4 outCol;
 
@@ -47,9 +50,6 @@ vec2 get_random(vec2 uv)
 
 float calc_ao(vec2 tcoord,vec2 uv, vec3 p, vec3 cnorm)
 {
-	const float intensity = 1.0;
-	const float scale = 0.5;
-	const float bias = 0.2;
 	vec3 diff = get_position(tcoord + uv) - p;
 	const vec3 v = normalize(diff);
 	const float d = length(diff)*scale;
@@ -73,14 +73,12 @@ void main()
 	vec3 Normal = vec3(texture(normalsTex, vTexcoords));
 	Normal.z = -sqrt(1-(Normal.x*Normal.x + Normal.y*Normal.y));
 
-	float ao_sample_rad = 0.09;
-
 	const vec2 vec[4] = {vec2(1,0),vec2(-1,0), vec2(0,1),vec2(0,-1)};
 
 	vec2 r = get_random(vTexcoords);
 
 	float ao = 0.0f;
-	float rad = ao_sample_rad/Position.z;
+	float rad = sample_radius/sqrt(abs(Position.z));
 
 	int iterations = 4;
 	for (int j = 0; j < iterations; ++j)
