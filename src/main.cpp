@@ -289,9 +289,29 @@ int main()
 	glm::vec2 sprite_size(16, 16);
 	glm::vec2 sprite_vec = spritesheet_size/sprite_size;
 	GLsizei sprites = sprite_vec.x*sprite_vec.y;
+	uint8_t *transformed_pixel_data = new uint8_t[sprites*16*16*4];
+	for(int tex_y = 0; tex_y < sprite_vec.y; ++tex_y ) {
+		for(int tex_x = 0; tex_x < sprite_vec.x; ++tex_x ) {
+			for(int pix_y = 0; pix_y < sprite_size.y; ++pix_y)
+				for(int pix_x = 0; pix_x < sprite_size.x; ++pix_x) {
+					size_t tf_index = (tex_y*sprite_vec.x + tex_x)*sprite_size.x*sprite_size.y;
+					tf_index += pix_y*sprite_size.x + pix_x;
+					tf_index *= 4;
+
+					size_t orig_index = (tex_y*sprite_size.y+pix_y)*(spritesheet_x);
+					orig_index += tex_x*sprite_size.x+pix_x;
+					orig_index *= 4;
+
+					transformed_pixel_data[tf_index+0] = spritesheet_data[orig_index+0];
+					transformed_pixel_data[tf_index+1] = spritesheet_data[orig_index+1];
+					transformed_pixel_data[tf_index+2] = spritesheet_data[orig_index+2];
+					transformed_pixel_data[tf_index+3] = spritesheet_data[orig_index+3];
+				}
+		}
+	}
 	glTexImage3D(
 		GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, sprite_size.x, sprite_size.y, sprites, 0, 
-		GL_RGBA, GL_UNSIGNED_BYTE, spritesheet_data
+		GL_RGBA, GL_UNSIGNED_BYTE, transformed_pixel_data
 	);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	stbi_image_free(spritesheet_data);
