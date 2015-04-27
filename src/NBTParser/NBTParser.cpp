@@ -215,12 +215,10 @@ std::shared_ptr<Tags::Byte_Array> parse_byte_array(uint8_t *data, uint32_t len, 
 	tmp |= static_cast<uint32_t>(data[++c])<<8;
 	tmp |= data[++c];
 
+	tag->data.resize(tmp);
+
 	for(uint32_t i=0;i<tmp;++i) {
-		Tags::Byte d;
-		d.data = data[++c];
-		tag->data.push_back(d);
-		if(i%8==0) {
-		}
+		tag->data[i].data = data[++c];
 	}
 
 	return tag;
@@ -249,11 +247,10 @@ std::shared_ptr<Tags::String> parse_string(uint8_t *data, uint32_t len, uint32_t
 		str_size = str_size | (static_cast<int16_t>(data[++c])<<8);
 		str_size = str_size | data[++c];
 
-	for(uint16_t i=0;i<str_size;++i) {
-		tag->data += data[++c];
-	}
+	tag->data.resize(str_size);
 
-	if(!is_name) {
+	for(uint16_t i=0;i<str_size;++i) {
+		tag->data[i] = data[++c];
 	}
 
 	return tag;
@@ -287,40 +284,42 @@ std::shared_ptr<Tags::List> parse_list(uint8_t *data, uint32_t len, uint32_t &cu
 	tmp |= static_cast<uint32_t>(data[++c])<<8;
 	tmp |= data[++c];
 
+	tag->data.resize(tmp);
+
 	for(uint32_t i=0;i<tmp;++i) {
 		switch(type) {
 			case Tags::Type::BYTE: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_byte(data, len, c, false, false, depth+1)));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_byte(data, len, c, false, false, depth+1));
 			} break;
 			case Tags::Type::SHORT: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_short(data, len, c, false, false, depth+1)));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_short(data, len, c, false, false, depth+1));
 			} break;
 			case Tags::Type::INT: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_int(data, len, c, false, false, depth+1)));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_int(data, len, c, false, false, depth+1));
 			} break;
 			case Tags::Type::LONG: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_long(data, len, c, false, false, depth+1)));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_long(data, len, c, false, false, depth+1));
 			} break;
 			case Tags::Type::FLOAT: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_float(data, len, c, false, false, depth+1)));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_float(data, len, c, false, false, depth+1));
 			} break;
 			case Tags::Type::DOUBLE: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_double(data, len, c, false, false, depth+1)));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_double(data, len, c, false, false, depth+1));
 			} break;
 			case Tags::Type::BYTE_ARRAY: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_byte_array(data, len, c, false, false, depth+1)));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_byte_array(data, len, c, false, false, depth+1));
 			} break;
 			case Tags::Type::STRING: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_string(data, len, c, false, false, depth+1)));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_string(data, len, c, false, false, depth+1));
 			} break;
 			case Tags::Type::INT_ARRAY: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_int_array(data, len, c, false, false, depth+1)));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_int_array(data, len, c, false, false, depth+1));
 			} break;
 			case Tags::Type::LIST: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_list(data, len, c, false, false, depth+1)));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_list(data, len, c, false, false, depth+1));
 			} break;
 			case Tags::Type::COMPOUND: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_compound(data, len, c, false, false, depth+1)));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_compound(data, len, c, false, false, depth+1));
 			} break;
 			default: {
 			} break;
@@ -421,10 +420,10 @@ std::shared_ptr<Tags::Int_Array> parse_int_array(uint8_t *data, uint32_t len, ui
 	tmp |= static_cast<uint32_t>(data[++c])<<8;
 	tmp |= data[++c];
 
-
+	tag->data.resize(tmp);
 
 	for(uint32_t i = 0;i<tmp;++i) {
-		tag->data.push_back(*parse_int(data, len, c, false, false, depth+1));
+		tag->data[i].data = parse_int(data, len, c, false, false, depth+1)->data;
 	}
 
 	return tag;
