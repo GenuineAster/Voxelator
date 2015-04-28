@@ -537,6 +537,12 @@ int main()
 	wlog.log(L"Generating chunk buffers.\n");
 	auto start_tf = std::chrono::high_resolution_clock::now();
 
+	GLuint ssbo;
+	glGenBuffers(1, &ssbo);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	glShaderStorageBlockBinding(generate_program, 0, 0);
+	glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 2, ssbo, 0, chunk_total*6*sizeof(GLint));
+
 	GLuint tbo;
 	GLuint tfo;
 	glGenTransformFeedbacks(1, &tfo);
@@ -573,34 +579,34 @@ int main()
 
 			// Get neighboring chunks, or set to empty_chunk if none
 			GLint neighbor_tex[6];
+			neighbor_tex[0]=0;
 			glActiveTexture(GL_TEXTURE2);
-			if(x<num_chunks.x-1) {
-				glBindTexture(GL_TEXTURE_3D, chunks[x+1][y].texid);
-				neighbor_tex[0]=2;
-			}
-			else {
-				neighbor_tex[0]=0;
-			}
-			glActiveTexture(GL_TEXTURE3);
-			if(y<num_chunks.y-1) {
-				glBindTexture(GL_TEXTURE_3D, chunks[x][y+1].texid);
-				neighbor_tex[1]=3;
+			if(x) {
+				glBindTexture(GL_TEXTURE_3D, chunks[x-1][y].texid);
+				neighbor_tex[1]=2;
 			}
 			else {
 				neighbor_tex[1]=0;
 			}
-			neighbor_tex[2]=0;
+			glActiveTexture(GL_TEXTURE3);
+			if(y) {
+				glBindTexture(GL_TEXTURE_3D, chunks[x][y-1].texid);
+				neighbor_tex[2]=3;
+			}
+			else {
+				neighbor_tex[2]=0;
+			}
 			glActiveTexture(GL_TEXTURE4);
-			if(x) {
-				glBindTexture(GL_TEXTURE_3D, chunks[x-1][y].texid);
+			if(x<num_chunks.x-1) {
+				glBindTexture(GL_TEXTURE_3D, chunks[x+1][y].texid);
 				neighbor_tex[3]=4;
 			}
 			else {
 				neighbor_tex[3]=0;
 			}
 			glActiveTexture(GL_TEXTURE5);
-			if(y) {
-				glBindTexture(GL_TEXTURE_3D, chunks[x][y-1].texid);
+			if(y<num_chunks.y-1) {
+				glBindTexture(GL_TEXTURE_3D, chunks[x][y+1].texid);
 				neighbor_tex[4]=5;
 			}
 			else {
@@ -613,6 +619,9 @@ int main()
 			//  of 1 chunk
 			glUniform1i(chunk_is_bottom_id_uni, true);
 			glUniform1iv(neighbor_id_uni, 6, neighbor_tex);
+
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+			glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_total*6*sizeof(GLint), nullptr, GL_STREAM_COPY);
 
 			glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, query);
 			glBeginTransformFeedback(GL_TRIANGLES);
