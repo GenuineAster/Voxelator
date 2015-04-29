@@ -1,11 +1,11 @@
-#version 430
+#version 450
 
 layout(invocations = 6) in;
 
 layout(points) in;
 layout(triangle_strip, max_vertices = 4) out;
 
-layout(std430, binding=0) buffer buff { bool facesused[6][]; };
+layout(std430, binding=0) buffer buff { bool facesused[]; };
 
 out vec3 gTexcoords;
 out vec3 gNormal;
@@ -21,15 +21,6 @@ uniform isampler3D neighbors[6];
 uniform bool chunkIsBottom=false;
 // Size of chunks
 uniform vec3 chunkSize;
-
-// Helper function that gets the block ID from the ID texture
-int getID(ivec3 pos) {
-	return texelFetch(IDTex, pos, 0).r;
-}
-
-int getID(isampler3D chunk, ivec3 pos) {
-	return texelFetch(chunk, pos, 0).r;
-}
 
 const vec3 normals[6] = {
 	vec3( 0, 0,-1),
@@ -47,6 +38,39 @@ const ivec3 inormals[6] = {
 	ivec3( 1, 0, 0),
 	ivec3( 0, 1, 0),
 	ivec3( 0, 0, 1),
+};
+
+const ivec3 expansion0[6] = {
+	ivec3( 0, 1, 0),
+	ivec3( 0, 0, 1),
+	ivec3( 0, 0, 1),
+	ivec3( 0, 0, 1),
+	ivec3( 0, 0, 1),
+	ivec3( 0, 1, 0),
+};
+const ivec3 expansion1[6] = {
+	ivec3( 1, 0, 0),
+	ivec3( 0, 1, 0),
+	ivec3( 1, 0, 0),
+	ivec3( 0, 1, 0),
+	ivec3( 1, 0, 0),
+	ivec3( 1, 0, 0),
+};
+const ivec3 expansion2[6] = {
+	ivec3( 0,-1, 0),
+	ivec3( 0, 0,-1),
+	ivec3( 0, 0,-1),
+	ivec3( 0, 0,-1),
+	ivec3( 0, 0,-1),
+	ivec3( 0,-1, 0),
+};
+const ivec3 expansion3[6] = {
+	ivec3(-1, 0, 0),
+	ivec3( 0,-1, 0),
+	ivec3(-1, 0, 0),
+	ivec3( 0,-1, 0),
+	ivec3(-1, 0, 0),
+	ivec3(-1, 0, 0),
 };
 
 const vec2 tex_offsets0[6] = {
@@ -171,6 +195,28 @@ const ivec3 border_chunk_check_sum2[6] = {
 };
 
 
+// Helper function that gets the block ID from the ID texture
+int getID(ivec3 pos) {
+	return texelFetch(IDTex, pos, 0).r;
+}
+
+int getID(isampler3D chunk, ivec3 pos) {
+	return texelFetch(chunk, pos, 0).r;
+}
+
+bool should_generate_face(ivec3 pos_index) {
+	int n = gl_InvocationID;
+	bool border_block, generate_face;
+	// If the block is not touching air, don't render it
+	border_block = pos_index*border_check[n]==chunkSize*border_chunk_check_mask[n]+border_chunk_check_sum[n];
+	generate_face = border_block&&(getID(neighbors[n], ivec3(pos_index*border_check_mask[n]+chunkSize*border_chunk_check_mask2[n]+border_chunk_check_sum2[n]))==0);
+	generate_face = generate_face && !(n==5&&chunkIsBottom&&pos_index.z==chunkSize.z-1);
+	generate_face = generate_face ||(!border_block&&(getID(pos_index+inormals[n]) == 0));
+	generate_face = generate_face && !facesused[int(n * chunkSize.z * chunkSize.y * chunkSize.x + pos_index.z * chunkSize.y * chunkSize.x + pos_index.y * chunkSize.x + pos_index.x)];
+	generate_face = all(lessThan(pos_index,ivec3(chunkSize))) && generate_face;
+	return generate_face;
+}
+
 void main() {
 	// Get the base position
 	vec4 pos = gl_in[0].gl_Position;
@@ -179,38 +225,45 @@ void main() {
 
 	int ID = getID(pos_index);
 
+	int n = gl_InvocationID;
+
+	int index = int(n * chunkSize.z * chunkSize.y * chunkSize.x + pos_index.z * chunkSize.y * chunkSize.x + pos_index.y * chunkSize.x + pos_index.x);
+
+	bool face_used = facesused[index];
+
 	//If the block is air, skip it
-	if(ID==0)
+	if(ID==0 || face_used)
 		return;
 
-	bool border_block, generate_face;
+	bool generate_face0 = should_generate_face(pos_index);
+	if(!generate_face0)
+		return;
 
-	int n;
+	facesused[int(n * chunkSize.z * chunkSize.y * chunkSize.x + pos_index.z * chunkSize.y * chunkSize.x + pos_index.y * chunkSize.x + pos_index.x)] = true;
+	ivec3 offsetx = ivec3(0,0,0);
+	// ivec3 offsetx = expansion0[n];
+	int incrementx = 0;
+	while(getID(pos_index + (offsetx+=expansion0[n])) == ID && should_generate_face(pos_index + offsetx)) {
+		++incrementx;
+		facesused[int(n * chunkSize.z * chunkSize.y * chunkSize.x + (pos_index.z+offsetx.z) * chunkSize.y * chunkSize.x + (pos_index.y+offsetx.y) * chunkSize.x + (pos_index.x+offsetx.x))] = true;
+	}
 
-
-	///////// +z
-	n = gl_InvocationID;
-	// If the block is not touching air, don't render it
-	border_block = pos_index*border_check[n]==chunkSize*border_chunk_check_mask[n]+border_chunk_check_sum[n];
-	generate_face = border_block&&(getID(neighbors[n], ivec3(pos_index*border_check_mask[n]+chunkSize*border_chunk_check_mask2[n]+border_chunk_check_sum2[n]))==0);
-	generate_face = generate_face && !(n==5&&chunkIsBottom&&pos_index.z==chunkSize.z-1);
-	generate_face = generate_face ||(!border_block&&(getID(pos_index+inormals[n]) == 0));
-	if(generate_face) {
+	if(generate_face0) {
 		// Draw first face
 		gNormal = normals[n];
 		//   First triangle
-		gPos = vec3(pos + pos_offsets0[n]);
+		gPos = vec3(pos + pos_offsets0[n]*vec4(offsetx + expansion1[n], 1.0));
 		gTexcoords = vec3(tex_offsets0[n], ID);
 		EmitVertex();
-		gPos = vec3(pos + pos_offsets1[n]);
+		gPos = vec3(pos + pos_offsets1[n]*vec4(offsetx + expansion1[n], 1.0));
 		gTexcoords = vec3(tex_offsets1[n], ID);
 		EmitVertex();
-		gPos = vec3(pos + pos_offsets2[n]);
-		gTexcoords = vec3(tex_offsets2[n], ID);
+		gPos = vec3(pos + pos_offsets2[n]*vec4(offsetx + expansion1[n], 1.0));
+		gTexcoords = vec3(tex_offsets2[n]*ivec2(incrementx, 1.0), ID);
 		EmitVertex();
 		//   Second triangle
-		gPos = vec3(pos + pos_offsets3[n]);
-		gTexcoords = vec3(tex_offsets3[n], ID);
+		gPos = vec3(pos + pos_offsets3[n]*vec4(offsetx + expansion1[n], 1.0));
+		gTexcoords = vec3(tex_offsets3[n]*ivec2(incrementx, 1.0), ID);
 		EmitVertex();
 		EndPrimitive();
 	}

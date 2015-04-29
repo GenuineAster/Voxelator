@@ -133,7 +133,7 @@ int main()
 	// Create window with context params etc.
 	wlog.log(L"Creating window.\n");
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
 	glfwWindowHint(GLFW_DEPTH_BITS, 24);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -537,11 +537,13 @@ int main()
 	wlog.log(L"Generating chunk buffers.\n");
 	auto start_tf = std::chrono::high_resolution_clock::now();
 
+
+	std::vector<GLboolean> ssbo_null(chunk_total*6, GL_FALSE);
 	GLuint ssbo;
 	glGenBuffers(1, &ssbo);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glShaderStorageBlockBinding(generate_program, 0, 0);
-	glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 2, ssbo, 0, chunk_total*6*sizeof(GLint));
+	glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_total*6*sizeof(GLboolean), ssbo_null.data(), GL_STREAM_COPY);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
 
 	GLuint tbo;
 	GLuint tfo;
@@ -621,7 +623,8 @@ int main()
 			glUniform1iv(neighbor_id_uni, 6, neighbor_tex);
 
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-			glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_total*6*sizeof(GLint), nullptr, GL_STREAM_COPY);
+			glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_total*6*sizeof(GLboolean), ssbo_null.data(), GL_STREAM_COPY);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssbo);
 
 			glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, query);
 			glBeginTransformFeedback(GL_TRIANGLES);

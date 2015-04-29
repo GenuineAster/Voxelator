@@ -1,4 +1,4 @@
-#version 430
+#version 450
 
 in vec3 pos;
 
