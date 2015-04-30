@@ -538,11 +538,11 @@ int main()
 	auto start_tf = std::chrono::high_resolution_clock::now();
 
 
-	std::vector<GLboolean> ssbo_null(chunk_total*6, GL_FALSE);
+	std::vector<GLboolean> ssbo_null(chunk_total*24, GL_FALSE);
 	GLuint ssbo;
 	glGenBuffers(1, &ssbo);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_total*6*sizeof(GLboolean), ssbo_null.data(), GL_STREAM_COPY);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_total*24*sizeof(GLboolean), ssbo_null.data(), GL_STREAM_COPY);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
 
 	GLuint tbo;
@@ -623,7 +623,7 @@ int main()
 			glUniform1iv(neighbor_id_uni, 6, neighbor_tex);
 
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-			glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_total*6*sizeof(GLboolean), ssbo_null.data(), GL_STREAM_COPY);
+			glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_total*24*sizeof(GLboolean), ssbo_null.data(), GL_STREAM_COPY);
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssbo);
 
 			glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, query);
@@ -882,8 +882,6 @@ int main()
 
 	std::chrono::high_resolution_clock::time_point start, end, timetoprint;
 	timetoprint = end = start = std::chrono::high_resolution_clock::now();
-
-	glFlush();
 
 	long long cnt=0;
 	long double ft_total=0.f;
