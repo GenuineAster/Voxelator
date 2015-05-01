@@ -1,4 +1,5 @@
 #version 430
+#define MAX_LIGHTS 128
 
 layout(depth_unchanged) out float gl_FragDepth;
 layout(early_fragment_tests) in;
@@ -9,10 +10,21 @@ in mat4 inverseProjection;
 uniform sampler2D normalsTex;
 uniform sampler2D colorTex;
 uniform sampler2D depthTex;
-uniform float intensity = 1.0;
-uniform float bias = 0.2;
-uniform float scale = 0.5;
-uniform float sample_radius = 0.23;
+uniform float intensity = 0.91;
+uniform float bias = -0.21;
+uniform float scale = 0.27;
+uniform float sample_radius = 0.20;
+
+struct Light {
+	vec3 position;
+	vec3 color;
+	float radius;
+};
+
+layout(std140, binding=0) uniform Lights {
+	int light_count;
+	Light lights[MAX_LIGHTS];
+};
 
 out vec4 outCol;
 
@@ -72,15 +84,16 @@ void main()
 	// Get normal Z from X and Y
 	vec3 Normal = vec3(texture(normalsTex, vTexcoords));
 	Normal.z = -sqrt(1-(Normal.x*Normal.x + Normal.y*Normal.y));
+	vec3 toSurface = normalize(-Position);
 
-	const vec2 vec[4] = {vec2(1,0),vec2(-1,0), vec2(0,1),vec2(0,-1)};
+	const vec2 vec[8] = {vec2(1,0),vec2(-1,0), vec2(0,1),vec2(0,-1), vec2(0.5,0.5), vec2(0.5,-0.5), vec2(-0.5,0.5), vec2(-0.5,-0.5)};
 
 	vec2 r = get_random(vTexcoords);
 
 	float ao = 0.0f;
 	float rad = sample_radius/sqrt(abs(Position.z));
 
-	int iterations = 4;
+	int iterations = 8;
 	for (int j = 0; j < iterations; ++j)
 	{
 		vec2 coord1 = reflect(vec[j],r)*rad;
@@ -93,7 +106,6 @@ void main()
 	ao /= iterations*4.0;
 
 	// Light position is 0,0,0, where the camera is
-	vec3 toSurface = normalize(-Position);
 
 	// Brightness is the dot product of the camera to primitive vector and the normal
 	float brightness = dot(Normal, toSurface);
@@ -103,4 +115,6 @@ void main()
 	outCol = texture(colorTex, vTexcoords);
 	outCol.rgb *= 1.0-ao;
 	outCol.rgb *= brightness;
+	outCol.rgb = mix(mix(vec3(0,0,0), vec3(0.517, 0.733, 0.996), clamp(brightness-0.5, 0.0, 1.0)), outCol.rgb, brightness);
+	// outCol = texture(colorTex, vTexcoords);
 }

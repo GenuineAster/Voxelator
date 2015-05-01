@@ -68,7 +68,7 @@ struct block{
 // It also contains its texture ID and an array of block IDs (which go into the
 //    textures)
 struct chunk{
-	static std::array<block, chunk_total> *offsets;
+	static std::vector<block> offsets;
 	glm::ivec3 position;
 	std::vector<block_id> *IDs;
 	GLenum texnum;
@@ -81,15 +81,19 @@ struct chunk{
 	GLuint vtx_array;
 };
 
-std::array<block, chunk_total> *chunk::offsets = 
-	new std::array<block, chunk_total>;
-
+std::vector<block> chunk::offsets;
 
 GLuint framebuffer_display_color_texture;
 
 constexpr float pi = 3.14159;
 
 Logger<wchar_t> wlog{std::wcout};
+
+struct Light {
+	glm::vec3 position;
+	glm::vec3 color;
+	GLfloat radius;
+};
 
 int cleanup(int rtval, std::wstring extra=L"");
 bool readfile(const char* filename, std::string &contents);
@@ -108,10 +112,11 @@ int main()
 	}
 
 	// Fill chunk offsets with.. their offsets
+	chunk::offsets.resize(chunk_total);
 	for(int z=0;z<chunk_size.z;++z) {
 		for(int y=0;y<chunk_size.y;++y) {
 			for(int x=0;x<chunk_size.x;++x) {
-				(*chunk::offsets)[z*chunk_size.x*chunk_size.y+y*chunk_size.x+x] = block{x,y,z};
+				chunk::offsets[z*chunk_size.x*chunk_size.y+y*chunk_size.x+x] = block{x,y,z};
 			}
 		}
 	}
@@ -344,8 +349,8 @@ int main()
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glBufferData(
-		GL_ARRAY_BUFFER, sizeof(*chunk::offsets),
-		chunk::offsets->data(), GL_STATIC_DRAW
+		GL_ARRAY_BUFFER, sizeof(*chunk::offsets.data())*chunk::offsets.size(),
+		chunk::offsets.data(), GL_STATIC_DRAW
 	);
 	process_gl_errors();
 
@@ -685,8 +690,11 @@ int main()
 	glDeleteTransformFeedbacks(1, &tfo);
 	glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, 0);
 	glDeleteBuffers(1, &tbo);
-	glBindVertexArray(0);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	glDeleteBuffers(1, &ssbo);
 	glDeleteVertexArrays(1, &generate_vao);
+	glBindVertexArray(0);
+	ssbo_null.clear();
 
 	auto end_tf = std::chrono::high_resolution_clock::now();
 
@@ -705,6 +713,12 @@ int main()
 		+ std::to_wstring(chunk_total_components*sizeof(float))
 		+ L"}.\n"
 	);
+
+	for(auto cx : chunks) {
+		for(auto cy : cx) {
+			glDeleteTextures(1, &cy.texid);
+		}
+	}
 
 	wlog.log(L"Starting main loop.\n");
 
@@ -888,12 +902,12 @@ int main()
 
 	cam.position = glm::vec3(num_chunks.x*chunk_size.x/2.f, num_chunks.y*chunk_size.y/2.f, 0.f);
 
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(0.517f, 0.733f, 0.996f, 1.f);
 
-	float intensity = 1.0;
-	float bias = 0.2;
-	float scale = 0.5;
-	float sample_radius = 0.23;
+	float intensity = 0.91;
+	float bias = -0.21;
+	float scale = 0.27;
+	float sample_radius = 0.20;
 
 	while(!glfwWindowShouldClose(win)) {
 		end = std::chrono::high_resolution_clock::now();
@@ -1145,12 +1159,10 @@ int main()
 		process_gl_errors();
 	}
 
-	delete chunk::offsets;
 	glDeleteTextures(1, &empty_chunk.texid);
 	delete empty_chunk.IDs;
 	for(unsigned int x = 0; x < chunks.size(); ++x) {
 		for(unsigned int y = 0; y < chunks[x].size(); ++y) {
-			glDeleteTextures(1, &(chunks[x][y].texid));
 			glDeleteBuffers(1, &(chunks[x][y].buffer_geometry));
 			glDeleteVertexArrays(1, &(chunks[x][y].vtx_array));
 		}
