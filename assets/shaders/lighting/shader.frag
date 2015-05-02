@@ -84,7 +84,6 @@ void main()
 	// Get normal Z from X and Y
 	vec3 Normal = vec3(texture(normalsTex, vTexcoords));
 	Normal.z = -sqrt(1-(Normal.x*Normal.x + Normal.y*Normal.y));
-	vec3 toSurface = normalize(-Position);
 
 	const vec2 vec[8] = {vec2(1,0),vec2(-1,0), vec2(0,1),vec2(0,-1), vec2(0.5,0.5), vec2(0.5,-0.5), vec2(-0.5,0.5), vec2(-0.5,-0.5)};
 
@@ -108,6 +107,7 @@ void main()
 	// Light position is 0,0,0, where the camera is
 
 	// Brightness is the dot product of the camera to primitive vector and the normal
+	vec3 toSurface = normalize(-Position);
 	float brightness = dot(Normal, toSurface);
 	brightness = clamp(brightness, 0.0, 1.0);
 

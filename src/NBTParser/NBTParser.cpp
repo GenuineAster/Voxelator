@@ -4,25 +4,25 @@
 #include <iomanip>
 #include <exception>
 
-std::shared_ptr<Tags::End> parse_end(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth);
-std::shared_ptr<Tags::Byte> parse_byte(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth);
-std::shared_ptr<Tags::Short> parse_short(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth);
-std::shared_ptr<Tags::Int> parse_int(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth);
-std::shared_ptr<Tags::Long> parse_long(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth);
-std::shared_ptr<Tags::Float> parse_float(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth);
-std::shared_ptr<Tags::Double> parse_double(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth);
-std::shared_ptr<Tags::Byte_Array> parse_byte_array(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth);
-std::shared_ptr<Tags::String> parse_string(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth, bool is_name=false);
-std::shared_ptr<Tags::List> parse_list(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth);
-std::shared_ptr<Tags::Compound> parse_compound(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth);
-std::shared_ptr<Tags::Int_Array> parse_int_array(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth);
+std::shared_ptr<Tags::End> parse_end(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name);
+std::shared_ptr<Tags::Byte> parse_byte(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name);
+std::shared_ptr<Tags::Short> parse_short(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name);
+std::shared_ptr<Tags::Int> parse_int(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name);
+std::shared_ptr<Tags::Long> parse_long(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name);
+std::shared_ptr<Tags::Float> parse_float(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name);
+std::shared_ptr<Tags::Double> parse_double(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name);
+std::shared_ptr<Tags::Byte_Array> parse_byte_array(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name);
+std::shared_ptr<Tags::String> parse_string(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, bool is_name=false);
+std::shared_ptr<Tags::List> parse_list(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name);
+std::shared_ptr<Tags::Compound> parse_compound(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name);
+std::shared_ptr<Tags::Int_Array> parse_int_array(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name);
 
 std::shared_ptr<Tags::Compound> parse_nbt(uint8_t *data, uint32_t len, uint32_t cursor) {
-	return parse_compound(data, len, cursor, true, true, 0);
+	return parse_compound(data, len, cursor, true, true);
 }
 
 
-std::shared_ptr<Tags::Byte> parse_byte(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth) {
+std::shared_ptr<Tags::Byte> parse_byte(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name) {
 	if(cursor >= len)
 		return std::make_shared<Tags::Byte>();
 
@@ -36,7 +36,7 @@ std::shared_ptr<Tags::Byte> parse_byte(uint8_t *data, uint32_t len, uint32_t &cu
 	std::shared_ptr<Tags::Byte> tag = std::make_shared<Tags::Byte>();
 
 	if(has_name) {
-		tag->name = parse_string(data, len, c, false, false, depth+1, true)->data;
+		tag->name = parse_string(data, len, c, false, false, true)->data;
 	}
 
 	tag->data = data[++c];
@@ -46,7 +46,7 @@ std::shared_ptr<Tags::Byte> parse_byte(uint8_t *data, uint32_t len, uint32_t &cu
 }
 
 
-std::shared_ptr<Tags::Short> parse_short(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth) {
+std::shared_ptr<Tags::Short> parse_short(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name) {
 	if(cursor >= len)
 		return std::make_shared<Tags::Short>(Tags::Short());
 
@@ -60,7 +60,7 @@ std::shared_ptr<Tags::Short> parse_short(uint8_t *data, uint32_t len, uint32_t &
 	std::shared_ptr<Tags::Short> tag = std::make_shared<Tags::Short>();
 
 	if(has_name) {
-		tag->name = parse_string(data, len, c, false, false, depth+1, true)->data;
+		tag->name = parse_string(data, len, c, false, false, true)->data;
 	}
 
 	tag->data = 0;
@@ -71,7 +71,7 @@ std::shared_ptr<Tags::Short> parse_short(uint8_t *data, uint32_t len, uint32_t &
 	return tag;
 }
 
-std::shared_ptr<Tags::Int> parse_int(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth) {
+std::shared_ptr<Tags::Int> parse_int(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name) {
 	if(cursor >= len)
 		return std::make_shared<Tags::Int>(Tags::Int());
 
@@ -85,7 +85,7 @@ std::shared_ptr<Tags::Int> parse_int(uint8_t *data, uint32_t len, uint32_t &curs
 	std::shared_ptr<Tags::Int> tag = std::make_shared<Tags::Int>();
 
 	if(has_name) {
-		tag->name = parse_string(data, len, c, false, false, depth+1, true)->data;
+		tag->name = parse_string(data, len, c, false, false, true)->data;
 	}
 
 	tag->data = 0;
@@ -98,7 +98,7 @@ std::shared_ptr<Tags::Int> parse_int(uint8_t *data, uint32_t len, uint32_t &curs
 	return tag;
 }
 
-std::shared_ptr<Tags::Long> parse_long(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth) {
+std::shared_ptr<Tags::Long> parse_long(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name) {
 	if(cursor >= len)
 		return std::make_shared<Tags::Long>(Tags::Long());
 
@@ -112,7 +112,7 @@ std::shared_ptr<Tags::Long> parse_long(uint8_t *data, uint32_t len, uint32_t &cu
 	std::shared_ptr<Tags::Long> tag = std::make_shared<Tags::Long>();
 
 	if(has_name) {
-		tag->name = parse_string(data, len, c, false, false, depth+1, true)->data;
+		tag->name = parse_string(data, len, c, false, false, true)->data;
 	}
 
 	tag->data = 0;
@@ -129,7 +129,7 @@ std::shared_ptr<Tags::Long> parse_long(uint8_t *data, uint32_t len, uint32_t &cu
 	return tag;
 }
 
-std::shared_ptr<Tags::Float> parse_float(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth) {
+std::shared_ptr<Tags::Float> parse_float(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name) {
 	if(cursor >= len)
 		return std::make_shared<Tags::Float>(Tags::Float());
 
@@ -143,7 +143,7 @@ std::shared_ptr<Tags::Float> parse_float(uint8_t *data, uint32_t len, uint32_t &
 	std::shared_ptr<Tags::Float> tag = std::make_shared<Tags::Float>();
 
 	if(has_name) {
-		tag->name = parse_string(data, len, c, false, false, depth+1, true)->data;
+		tag->name = parse_string(data, len, c, false, false, true)->data;
 	}
 
 	uint32_t tmp = 0;
@@ -158,7 +158,7 @@ std::shared_ptr<Tags::Float> parse_float(uint8_t *data, uint32_t len, uint32_t &
 	return tag;
 }
 
-std::shared_ptr<Tags::Double> parse_double(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth) {
+std::shared_ptr<Tags::Double> parse_double(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name) {
 	if(cursor >= len)
 		return std::make_shared<Tags::Double>(Tags::Double());
 
@@ -172,7 +172,7 @@ std::shared_ptr<Tags::Double> parse_double(uint8_t *data, uint32_t len, uint32_t
 	std::shared_ptr<Tags::Double> tag = std::make_shared<Tags::Double>();
 
 	if(has_name) {
-		tag->name = parse_string(data, len, c, false, false, depth+1, true)->data;
+		tag->name = parse_string(data, len, c, false, false, true)->data;
 	}
 
 	uint64_t tmp;
@@ -191,7 +191,7 @@ std::shared_ptr<Tags::Double> parse_double(uint8_t *data, uint32_t len, uint32_t
 	return tag;
 }
 
-std::shared_ptr<Tags::Byte_Array> parse_byte_array(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth) {
+std::shared_ptr<Tags::Byte_Array> parse_byte_array(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name) {
 	if(cursor >= len)
 		return std::make_shared<Tags::Byte_Array>(Tags::Byte_Array());
 
@@ -205,7 +205,7 @@ std::shared_ptr<Tags::Byte_Array> parse_byte_array(uint8_t *data, uint32_t len, 
 	std::shared_ptr<Tags::Byte_Array> tag = std::make_shared<Tags::Byte_Array>();
 
 	if(has_name) {
-		tag->name = parse_string(data, len, c, false, false, depth+1, true)->data;
+		tag->name = parse_string(data, len, c, false, false, true)->data;
 	}
 
 
@@ -224,7 +224,7 @@ std::shared_ptr<Tags::Byte_Array> parse_byte_array(uint8_t *data, uint32_t len, 
 	return tag;
 }
 
-std::shared_ptr<Tags::String> parse_string(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth, bool is_name) {
+std::shared_ptr<Tags::String> parse_string(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, bool is_name) {
 	if(cursor >= len)
 		return std::make_shared<Tags::String>(Tags::String());
 
@@ -238,7 +238,7 @@ std::shared_ptr<Tags::String> parse_string(uint8_t *data, uint32_t len, uint32_t
 	std::shared_ptr<Tags::String> tag = std::make_shared<Tags::String>();
 
 	if(has_name) {
-		tag->name = parse_string(data, len, c, false, false, depth+1, true)->data;
+		tag->name = parse_string(data, len, c, false, false, true)->data;
 	}
 
 
@@ -256,7 +256,7 @@ std::shared_ptr<Tags::String> parse_string(uint8_t *data, uint32_t len, uint32_t
 	return tag;
 }
 
-std::shared_ptr<Tags::List> parse_list(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth) {
+std::shared_ptr<Tags::List> parse_list(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name) {
 	if(cursor >= len)
 		return std::make_shared<Tags::List>(Tags::List());
 
@@ -270,7 +270,7 @@ std::shared_ptr<Tags::List> parse_list(uint8_t *data, uint32_t len, uint32_t &cu
 	std::shared_ptr<Tags::List> tag = std::make_shared<Tags::List>();
 
 	if(has_name) {
-		tag->name = parse_string(data, len, c, false, false, depth+1, true)->data;
+		tag->name = parse_string(data, len, c, false, false, true)->data;
 	}
 
 
@@ -289,37 +289,37 @@ std::shared_ptr<Tags::List> parse_list(uint8_t *data, uint32_t len, uint32_t &cu
 	for(uint32_t i=0;i<tmp;++i) {
 		switch(type) {
 			case Tags::Type::BYTE: {
-				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_byte(data, len, c, false, false, depth+1));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_byte(data, len, c, false, false));
 			} break;
 			case Tags::Type::SHORT: {
-				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_short(data, len, c, false, false, depth+1));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_short(data, len, c, false, false));
 			} break;
 			case Tags::Type::INT: {
-				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_int(data, len, c, false, false, depth+1));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_int(data, len, c, false, false));
 			} break;
 			case Tags::Type::LONG: {
-				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_long(data, len, c, false, false, depth+1));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_long(data, len, c, false, false));
 			} break;
 			case Tags::Type::FLOAT: {
-				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_float(data, len, c, false, false, depth+1));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_float(data, len, c, false, false));
 			} break;
 			case Tags::Type::DOUBLE: {
-				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_double(data, len, c, false, false, depth+1));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_double(data, len, c, false, false));
 			} break;
 			case Tags::Type::BYTE_ARRAY: {
-				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_byte_array(data, len, c, false, false, depth+1));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_byte_array(data, len, c, false, false));
 			} break;
 			case Tags::Type::STRING: {
-				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_string(data, len, c, false, false, depth+1));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_string(data, len, c, false, false));
 			} break;
 			case Tags::Type::INT_ARRAY: {
-				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_int_array(data, len, c, false, false, depth+1));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_int_array(data, len, c, false, false));
 			} break;
 			case Tags::Type::LIST: {
-				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_list(data, len, c, false, false, depth+1));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_list(data, len, c, false, false));
 			} break;
 			case Tags::Type::COMPOUND: {
-				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_compound(data, len, c, false, false, depth+1));
+				tag->data[i] = std::static_pointer_cast<Tags::Tag>(parse_compound(data, len, c, false, false));
 			} break;
 			default: {
 			} break;
@@ -330,7 +330,7 @@ std::shared_ptr<Tags::List> parse_list(uint8_t *data, uint32_t len, uint32_t &cu
 	return tag;
 }
 
-std::shared_ptr<Tags::Compound> parse_compound(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth) {
+std::shared_ptr<Tags::Compound> parse_compound(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name) {
 	if(cursor >= len)
 		return std::make_shared<Tags::Compound>(Tags::Compound());
 
@@ -345,44 +345,44 @@ std::shared_ptr<Tags::Compound> parse_compound(uint8_t *data, uint32_t len, uint
 	std::shared_ptr<Tags::Compound> tag = std::make_shared<Tags::Compound>();
 
 	if(has_name) {
-		tag->name = parse_string(data, len, c, false, false, depth+1, true)->data;
+		tag->name = parse_string(data, len, c, false, false, true)->data;
 	}
 
 
 	while(data[++c] != Tags::END) {
 		switch(data[c]) {
 			case Tags::Type::BYTE: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_byte(data, len, c, true, true, depth+1)));
+				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_byte(data, len, c, true, true)));
 			} break;
 			case Tags::Type::SHORT: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_short(data, len, c, true, true, depth+1)));
+				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_short(data, len, c, true, true)));
 			} break;
 			case Tags::Type::INT: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_int(data, len, c, true, true, depth+1)));
+				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_int(data, len, c, true, true)));
 			} break;
 			case Tags::Type::LONG: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_long(data, len, c, true, true, depth+1)));
+				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_long(data, len, c, true, true)));
 			} break;
 			case Tags::Type::FLOAT: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_float(data, len, c, true, true, depth+1)));
+				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_float(data, len, c, true, true)));
 			} break;
 			case Tags::Type::DOUBLE: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_double(data, len, c, true, true, depth+1)));
+				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_double(data, len, c, true, true)));
 			} break;
 			case Tags::Type::BYTE_ARRAY: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_byte_array(data, len, c, true, true, depth+1)));
+				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_byte_array(data, len, c, true, true)));
 			} break;
 			case Tags::Type::STRING: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_string(data, len, c, true, true, depth+1)));
+				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_string(data, len, c, true, true)));
 			} break;
 			case Tags::Type::LIST: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_list(data, len, c, true, true, depth+1)));
+				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_list(data, len, c, true, true)));
 			} break;
 			case Tags::Type::COMPOUND: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_compound(data, len, c, true, true, depth+1)));
+				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_compound(data, len, c, true, true)));
 			} break;
 			case Tags::Type::INT_ARRAY: {
-				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_int_array(data, len, c, true, true, depth+1)));
+				tag->data.push_back(std::static_pointer_cast<Tags::Tag>(parse_int_array(data, len, c, true, true)));
 			} break;
 			case Tags::Type::END: {
 				return tag;
@@ -396,7 +396,7 @@ std::shared_ptr<Tags::Compound> parse_compound(uint8_t *data, uint32_t len, uint
 	return tag;
 }
 
-std::shared_ptr<Tags::Int_Array> parse_int_array(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name, int depth) {
+std::shared_ptr<Tags::Int_Array> parse_int_array(uint8_t *data, uint32_t len, uint32_t &cursor, bool has_tag, bool has_name) {
 	if(cursor >= len)
 		return std::make_shared<Tags::Int_Array>(Tags::Int_Array());
 
@@ -410,7 +410,7 @@ std::shared_ptr<Tags::Int_Array> parse_int_array(uint8_t *data, uint32_t len, ui
 	std::shared_ptr<Tags::Int_Array> tag = std::make_shared<Tags::Int_Array>();
 
 	if(has_name) {
-		tag->name = parse_string(data, len, c, false, false, depth+1, true)->data;
+		tag->name = parse_string(data, len, c, false, false, true)->data;
 	}
 
 
@@ -423,7 +423,7 @@ std::shared_ptr<Tags::Int_Array> parse_int_array(uint8_t *data, uint32_t len, ui
 	tag->data.resize(tmp);
 
 	for(uint32_t i = 0;i<tmp;++i) {
-		tag->data[i].data = parse_int(data, len, c, false, false, depth+1)->data;
+		tag->data[i].data = parse_int(data, len, c, false, false)->data;
 	}
 
 	return tag;
