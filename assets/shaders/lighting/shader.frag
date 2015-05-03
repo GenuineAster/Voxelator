@@ -6,6 +6,7 @@ layout(early_fragment_tests) in;
 
 in vec2 vTexcoords;
 in mat4 inverseProjection;
+in mat4 proj;
 
 uniform sampler2D normalsTex;
 uniform sampler2D colorTex;
@@ -14,11 +15,14 @@ uniform float intensity = 0.91;
 uniform float bias = -0.21;
 uniform float scale = 0.27;
 uniform float sample_radius = 0.20;
+uniform mat4  view;
 
 struct Light {
-	vec3 position;
-	vec3 color;
+	vec4 position;
+	vec4 color;
 	float radius;
+	float brightness;
+	float fade;
 };
 
 layout(std140, binding=0) uniform Lights {
@@ -104,17 +108,29 @@ void main()
 	}
 	ao /= iterations*4.0;
 
-	// Light position is 0,0,0, where the camera is
-
 	// Brightness is the dot product of the camera to primitive vector and the normal
-	vec3 toSurface = normalize(-Position);
-	float brightness = dot(Normal, toSurface);
-	brightness = clamp(brightness, 0.0, 1.0);
+	mat4 trans = {
+		vec4(1.0,0.0,0.0,0.0),
+		vec4(0.0,1.0,0.0,0.0),
+		vec4(0.0,0.0,1.0,0.0),
+		vec4(0.0,0.0,0.0,1.0)
+	};
+
+	vec3 light_color = vec3(0.0);
+
+	for(int i = 0; i < light_count; ++i) {
+		vec3 lightpos = ((proj*view*trans)*lights[i].position).xyz;
+		float dist = length(lightpos-Position);
+		vec3 toSurface = normalize(lightpos-Position);
+		float brightness = dot(Normal, toSurface);
+		// brightness = clamp(brightness/2.0, 0.0, 1.0) * 1.f;
+		brightness = clamp(brightness, 0.0, 1.0) * lights[i].brightness;
+		float fade = max(lights[i].fade/(dist-lights[i].radius), float(dist<lights[i].radius));
+		light_color += brightness * lights[i].color.rgb * clamp(fade, 0.0, 1.0);
+	}
 
 	// Mix colors
 	outCol = texture(colorTex, vTexcoords);
 	outCol.rgb *= 1.0-ao;
-	outCol.rgb *= brightness;
-	outCol.rgb = mix(mix(vec3(0,0,0), vec3(0.517, 0.733, 0.996), clamp(brightness-0.5, 0.0, 1.0)), outCol.rgb, brightness);
-	// outCol = texture(colorTex, vTexcoords);
+	outCol.rgb *= light_color;
 }

@@ -10,6 +10,7 @@
 #include "Program/Program.hpp"
 #include "Util/Util.hpp"
 #include "MapLoader/MapLoader.hpp"
+#include "Light/Light.hpp"
 #include <thread>
 #include <vector>
 #include <sstream>
@@ -89,11 +90,6 @@ constexpr float pi = 3.14159;
 
 Logger<wchar_t> wlog{std::wcout};
 
-struct Light {
-	glm::vec3 position;
-	glm::vec3 color;
-	GLfloat radius;
-};
 
 int cleanup(int rtval, std::wstring extra=L"");
 bool readfile(const char* filename, std::string &contents);
@@ -489,6 +485,22 @@ int main()
 	GLint light_depth_uni = glGetUniformLocation(lighting_program, "depthTex");
 	GLint light_proj_uni = glGetUniformLocation(lighting_program, "projection");
 	glUniformMatrix4fv(light_proj_uni, 1, GL_FALSE, glm::value_ptr(projection));
+	GLint light_view_uni = glGetUniformLocation(lighting_program, "view");
+	glUniformMatrix4fv(light_view_uni, 1, GL_FALSE, glm::value_ptr(view));
+
+	LightArray lights;
+	lights.light_count = 1;
+	lights.lights[0].brightness = 1.f;
+	lights.lights[0].radius = 500.f;
+	lights.lights[0].fade = 30.f;
+	lights.lights[0].position = glm::vec4(8.f, 8.f, 70.f, 1.f);
+	lights.lights[0].color = glm::vec4(1.f, 0.9f, 1.f, 1.f);
+	GLuint light_buffer;
+	glGenBuffers(1, &light_buffer);
+	glBindBuffer(GL_UNIFORM_BUFFER, light_buffer);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(lights), &lights, GL_STREAM_COPY);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 0, light_buffer);
+
 
 	GLint light_intensity_uni = glGetUniformLocation(lighting_program, "intensity");
 	GLint light_bias_uni = glGetUniformLocation(lighting_program, "bias");
@@ -1098,6 +1110,7 @@ int main()
 		);
 
 		glUniformMatrix4fv(view_uni, 1, GL_FALSE, glm::value_ptr(view));
+		glProgramUniformMatrix4fv(lighting_program, light_view_uni, 1, GL_FALSE, glm::value_ptr(view));
 		glUniform1i(render_spritesheet_uni, 0);
 
 
