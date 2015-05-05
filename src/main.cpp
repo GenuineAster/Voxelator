@@ -32,7 +32,7 @@ constexpr const_vec<float> init_win_size(960.f, 540.f);
 constexpr const_vec<float> render_size(3840.f, 2160.f);
 
 //Specify amount of chunks
-constexpr const_vec<int32_t> num_chunks(16, 16, 1);
+constexpr const_vec<int32_t> num_chunks(64, 64, 1);
 // Specify chunk sizes, chunk_size_*  and chunk_total must be a power of 2.
 constexpr const_vec<int32_t> chunk_size(16, 16, 256);
 constexpr uint64_t chunk_total =chunk_size.x*chunk_size.y*chunk_size.z;
