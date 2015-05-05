@@ -32,7 +32,7 @@ constexpr const_vec<float> init_win_size(960.f, 540.f);
 constexpr const_vec<float> render_size(3840.f, 2160.f);
 
 //Specify amount of chunks
-constexpr const_vec<int32_t> num_chunks(64, 64, 1);
+constexpr const_vec<int32_t> num_chunks(16, 16, 1);
 // Specify chunk sizes, chunk_size_*  and chunk_total must be a power of 2.
 constexpr const_vec<int32_t> chunk_size(16, 16, 256);
 constexpr uint64_t chunk_total =chunk_size.x*chunk_size.y*chunk_size.z;
@@ -43,20 +43,37 @@ constexpr GLsizei components_per_vtx = 9;
 
 // Camera struct
 struct camera {
-	// Static members for reference data
-	static const glm::vec3 _direction;
-	static const glm::vec3 _up;
-	static const glm::vec3 _right;
-	glm::vec3 up = _up;
-	glm::vec3 direction = _direction;
-	glm::vec3 right = _right;
-	glm::vec3 position;
 	glm::quat orientation;
-};
+	glm::vec3 position;
 
-const glm::vec3 camera::_direction = glm::vec3( 1.f, 0.f, 0.f);
-const glm::vec3 camera::_up        = glm::vec3( 0.f, 0.f, -1.f);
-const glm::vec3 camera::_right     = glm::vec3( 0.f, 1.f, 0.f);
+	void rotate(glm::vec3 axis, float angle) {
+		glm::quat rot = glm::angleAxis(angle, axis);
+		orientation = rot * orientation;
+		orientation = normalize(orientation);
+	}
+	void strafe(float amount) {
+		move({0.f, amount, 0.f});
+	}
+	void climb(float amount) {
+		move({0.f, 0.f, amount});
+	}
+	void advance(float amount) {
+		move({amount, 0.f, 0.f});
+	}
+	void move(glm::vec3 delta) {
+		auto tmp = glm::mat4_cast(orientation);
+		auto x = glm::vec3(tmp[0][2], tmp[1][2], tmp[2][2]);
+		auto y = -glm::vec3(tmp[0][0], tmp[1][0], tmp[2][0]);
+		auto z = -glm::vec3(tmp[0][1], tmp[1][1], tmp[2][1]);
+		position += x*delta.x + y*delta.y + z*delta.z;
+	}
+
+	glm::mat4 get_view() {
+		auto tmp = glm::mat4_cast(orientation);
+		tmp = glm::translate(tmp, position);
+		return tmp;
+	}
+};
 
 // A block just contains its own coordinates
 struct block{
@@ -448,19 +465,11 @@ int main()
 	wlog.log(L"Creating and getting camera position uniform data.\n");
 
 	camera cam;
-	cam.up = camera::_up;
-	cam.direction = camera::_direction;
-	cam.right = camera::_right;
-	cam.orientation = glm::quat();
 
 	process_gl_errors();
 
 	wlog.log(L"Creating and getting view uniform data.\n");
-	glm::mat4 view = glm::lookAt(
-		cam.position,
-		cam.direction,
-		cam.up
-	);
+	glm::mat4 view = cam.get_view();
 	GLint view_uni = glGetUniformLocation(render_program, "view");
 	glUniformMatrix4fv(view_uni, 1, GL_FALSE, glm::value_ptr(view));
 
@@ -912,8 +921,6 @@ int main()
 	long long cnt=0;
 	long double ft_total=0.f;
 
-	cam.position = glm::vec3(num_chunks.x*chunk_size.x/2.f, num_chunks.y*chunk_size.y/2.f, 0.f);
-
 	glClearColor(0.517f, 0.733f, 0.996f, 1.f);
 
 	float intensity = 0.91;
@@ -935,15 +942,6 @@ int main()
 		).count();
 		if(tslastprint >= 1) {
 			timetoprint = std::chrono::high_resolution_clock::now();
-			wlog.log(L"Direction:\t");
-			wlog.log(cam.direction, false);
-			wlog.log(L"\n", false);
-			wlog.log(L"Up:\t\t");
-			wlog.log(cam.up, false);
-			wlog.log(L"\n", false);
-			wlog.log(L"Right:\t");
-			wlog.log(cam.right, false);
-			wlog.log(L"\n", false);
 			float ft_avg = ft_total/cnt;
 			std::wstring frametimestr = L"FPS avg: " + 
 				std::to_wstring(1e6L/ft_avg) + L"\t" +
@@ -958,91 +956,41 @@ int main()
 		}
 		start=end;
 
-		if(glfwGetKey(win, GLFW_KEY_Q)) {
-			cam.orientation = glm::rotate(
-				cam.orientation, -1*fts_float, camera::_direction
-			);
-			cam.direction = cam.orientation * camera::_direction * 
-				glm::conjugate(cam.orientation) * fts_float;
-			cam.up        = cam.orientation * camera::_up  * 
-				glm::conjugate(cam.orientation) * fts_float;
-			cam.right     = cam.orientation * camera::_right  * 
-				glm::conjugate(cam.orientation) * fts_float;
-		}
-		if(glfwGetKey(win, GLFW_KEY_E)) {
-			cam.orientation = glm::rotate(
-				cam.orientation,  1*fts_float, camera::_direction
-			);
-			cam.direction = cam.orientation * camera::_direction  * 
-				glm::conjugate(cam.orientation) * fts_float;
-			cam.up        = cam.orientation * camera::_up  * 
-				glm::conjugate(cam.orientation) * fts_float;
-			cam.right     = cam.orientation * camera::_right  * 
-				glm::conjugate(cam.orientation) * fts_float;
-		}
 		if(glfwGetKey(win, GLFW_KEY_W)) {
-			cam.orientation = glm::rotate(
-				cam.orientation,  1*fts_float, camera::_right
-			);
-			cam.direction = cam.orientation * camera::_direction  * 
-				glm::conjugate(cam.orientation) * fts_float;
-			cam.up        = cam.orientation * camera::_up  * 
-				glm::conjugate(cam.orientation) * fts_float;
-			cam.right     = cam.orientation * camera::_right  * 
-				glm::conjugate(cam.orientation) * fts_float;
+			cam.rotate({-1.f, 0.f, 0.f}, fts_float*3.f);
 		}
 		if(glfwGetKey(win, GLFW_KEY_S)) {
-			cam.orientation = glm::rotate(
-				cam.orientation,  -1*fts_float, camera::_right
-			);
-			cam.direction = cam.orientation * camera::_direction  * 
-				glm::conjugate(cam.orientation) * fts_float;
-			cam.up        = cam.orientation * camera::_up * 
-				glm::conjugate(cam.orientation) * fts_float;
-			cam.right     = cam.orientation * camera::_right  * 
-				glm::conjugate(cam.orientation) * fts_float;
+			cam.rotate({ 1.f, 0.f, 0.f}, fts_float*3.f);
 		}
 		if(glfwGetKey(win, GLFW_KEY_A)) {
-			cam.orientation = glm::rotate(
-				cam.orientation,  1*fts_float, camera::_up
-			);
-			cam.direction = cam.orientation * camera::_direction * 
-				glm::conjugate(cam.orientation) * fts_float;
-			cam.up        = cam.orientation * camera::_up * 
-				glm::conjugate(cam.orientation) * fts_float;
-			cam.right     = cam.orientation * camera::_right  * 
-				glm::conjugate(cam.orientation) * fts_float;
+			cam.rotate({ 0.f,-1.f, 0.f}, fts_float*3.f);
 		}
 		if(glfwGetKey(win, GLFW_KEY_D)) {
-			cam.orientation = glm::rotate(
-				cam.orientation,  -1*fts_float, camera::_up
-			);
-			cam.direction = cam.orientation * camera::_direction * 
-				glm::conjugate(cam.orientation) * fts_float;
-			cam.up        = cam.orientation * camera::_up * 
-				glm::conjugate(cam.orientation) * fts_float;
-			cam.right     = cam.orientation * camera::_right  * 
-				glm::conjugate(cam.orientation) * fts_float;
+			cam.rotate({ 0.f, 1.f, 0.f}, fts_float*3.f);
 		}
-		cam.orientation = glm::normalize(cam.orientation);
-
+		if(glfwGetKey(win, GLFW_KEY_Q)) {
+			cam.rotate({ 0.f, 0.f,-1.f}, fts_float*3.f);
+		}
+		if(glfwGetKey(win, GLFW_KEY_E)) {
+			cam.rotate({ 0.f, 0.f, 1.f}, fts_float*3.f);
+		}
 		if(glfwGetKey(win, GLFW_KEY_UP)) {
-		 	cam.position += glm::normalize(cam.direction)*fts_float*100.f;
+			cam.advance(fts_float*100.f);
 		}
 		if(glfwGetKey(win, GLFW_KEY_DOWN)) {
-		 	cam.position += -glm::normalize(cam.direction)*fts_float*100.f;
+			cam.advance(fts_float*-100.f);
 		}
 		if(glfwGetKey(win, GLFW_KEY_RIGHT)) {
-			cam.position += glm::normalize(cam.right)*fts_float*100.f;
+			cam.strafe(fts_float*100.f);
 		}
 		if(glfwGetKey(win, GLFW_KEY_LEFT)) {
-			cam.position += -glm::normalize(cam.right)*fts_float*100.f;
+			cam.strafe(fts_float*-100.f);
 		}
 		if(glfwGetKey(win, GLFW_KEY_SPACE)) {
-			cam.position += glm::normalize(cam.up)*fts_float*100.f;
+			cam.climb(fts_float*100.f);
 		}
 		if(glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL)) {
-			cam.position += -glm::normalize(cam.up)*fts_float*100.f;
+			cam.climb(fts_float*-100.f);
 		}
 
 		if(glfwGetKey(win, GLFW_KEY_G)) {
@@ -1105,10 +1053,7 @@ int main()
 
 		glUseProgram(render_program);
 
-		view = glm::lookAt(
-			cam.position, cam.position + cam.direction*10.f, cam.up*10.f
-		);
-
+		view = cam.get_view();
 		glUniformMatrix4fv(view_uni, 1, GL_FALSE, glm::value_ptr(view));
 		glProgramUniformMatrix4fv(lighting_program, light_view_uni, 1, GL_FALSE, glm::value_ptr(view));
 		glUniform1i(render_spritesheet_uni, 0);
