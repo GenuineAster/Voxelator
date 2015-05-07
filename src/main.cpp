@@ -29,8 +29,7 @@ using block_id = uint8_t;
 using coord_type = uint8_t;
 
 constexpr const_vec<float> init_win_size(960.f, 540.f);
-// constexpr const_vec<float> render_size(3840.f, 2160.f);
-constexpr const_vec<float> render_size(960.f, 540.f);
+constexpr const_vec<float> render_size(3840.f, 2160.f);
 
 //Specify amount of chunks
 constexpr const_vec<int32_t> num_chunks(64, 64, 1);
