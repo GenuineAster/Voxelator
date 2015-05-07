@@ -29,13 +29,15 @@ using block_id = uint8_t;
 using coord_type = uint8_t;
 
 constexpr const_vec<float> init_win_size(960.f, 540.f);
-constexpr const_vec<float> render_size(3840.f, 2160.f);
+// constexpr const_vec<float> render_size(3840.f, 2160.f);
+constexpr const_vec<float> render_size(960.f, 540.f);
 
 //Specify amount of chunks
 constexpr const_vec<int32_t> num_chunks(64, 64, 1);
 // Specify chunk sizes, chunk_size_*  and chunk_total must be a power of 2.
 constexpr const_vec<int32_t> chunk_size(16, 16, 256);
 constexpr uint64_t chunk_total =chunk_size.x*chunk_size.y*chunk_size.z;
+constexpr const_vec<int> chunk_grouping(4, 4, 1);
 
 constexpr const_vec<int> block_offset(0, sizeof(coord_type), 2*sizeof(coord_type));
 
@@ -96,6 +98,13 @@ struct chunk{
 	GLuint primitive_count;
 	GLuint vertex_count;
 	GLuint component_count;
+	GLuint vtx_array;
+	bool draw;
+};
+
+struct chunk_group {
+	std::vector<chunk*> chunks;
+	GLuint merged_geometry;
 	GLuint vtx_array;
 };
 
@@ -499,7 +508,7 @@ int main()
 
 	LightArray lights;
 	lights.light_count = 1;
-	lights.lights[0].brightness = 1.f;
+	lights.lights[0].brightness = 1.7f;
 	lights.lights[0].radius = 500.f;
 	lights.lights[0].fade = 30.f;
 	lights.lights[0].position = glm::vec4(8.f, 8.f, 70.f, 1.f);
@@ -716,6 +725,57 @@ int main()
 	glDeleteVertexArrays(1, &generate_vao);
 	glBindVertexArray(0);
 	ssbo_null.clear();
+
+	std::vector<std::vector<chunk_group>> chunk_groupings(
+		num_chunks.x/chunk_grouping.x, std::vector<chunk_group>{num_chunks.y/chunk_grouping.y}
+	);
+
+	for(int x = 0; x < num_chunks.x/chunk_grouping.x; ++x) {
+		for(int y = 0; y < num_chunks.y/chunk_grouping.y; ++y) {
+			size_t sum = 0;
+			for(int i = 0; i < chunk_grouping.x; ++i) {
+				for(int j = 0; j < chunk_grouping.y; ++j) {
+					chunk_groupings[x][y].chunks.push_back(&chunks[x*chunk_grouping.x+i][y*chunk_grouping.y+j]);
+					sum += chunks[x*chunk_grouping.x+i][y*chunk_grouping.y+j].component_count * sizeof(float);
+				}
+			}
+			glGenBuffers(1, &chunk_groupings[x][y].merged_geometry);
+			glBindBuffer(GL_COPY_WRITE_BUFFER, chunk_groupings[x][y].merged_geometry);
+			glBufferData(GL_COPY_WRITE_BUFFER, sum, nullptr, GL_STATIC_COPY);
+			sum = 0;
+			for(auto &c : chunk_groupings[x][y].chunks) {
+				glBindBuffer(GL_COPY_READ_BUFFER , c->buffer_geometry);
+				glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, sum, c->component_count*sizeof(float));
+				glBindBuffer(GL_COPY_READ_BUFFER, 0);
+				glDeleteBuffers(1, &c->buffer_geometry);
+				sum += c->component_count*sizeof(float);
+			}
+
+			glBindBuffer(GL_COPY_READ_BUFFER, 0);
+			glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+
+			glBindBuffer(GL_ARRAY_BUFFER, chunk_groupings[x][y].merged_geometry);
+			glGenVertexArrays(1, &chunk_groupings[x][y].vtx_array);
+			glBindVertexArray(chunk_groupings[x][y].vtx_array);
+			GLint pos_attrib = glGetAttribLocation(render_program, "pos");
+			if(pos_attrib != -1) {
+				glEnableVertexAttribArray(pos_attrib);
+				glVertexAttribPointer(pos_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*0));
+			}
+
+			GLint texcoord_attrib = glGetAttribLocation(render_program, "texcoords");
+			if(texcoord_attrib != -1) {
+				glEnableVertexAttribArray(texcoord_attrib);
+				glVertexAttribPointer(texcoord_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*3));
+			}
+
+			GLint normal_attrib = glGetAttribLocation(render_program, "normal");
+			if(normal_attrib != -1) {
+				glEnableVertexAttribArray(normal_attrib);
+				glVertexAttribPointer(normal_attrib, 3, GL_FLOAT, GL_FALSE, components_per_vtx*sizeof(GLfloat), BUFFER_OFFSET(sizeof(float)*6));
+			}
+		}
+	}
 
 	auto end_tf = std::chrono::high_resolution_clock::now();
 
@@ -1063,22 +1123,43 @@ int main()
 		glViewport(0.f, 0.f, render_size.x, render_size.y);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		for(auto &cv : chunks) {
+			for(auto &c : cv) {
+				c.draw = false;
+			}
+		}
 
 		for(unsigned int i = 0; i < fc_primitives; ++i) {
 			unsigned int x = visible_indices[i].x;
-			unsigned int y = visible_indices[i].y;
-			glm::mat4 transform;
-			transform = glm::translate(
-				transform,
-				glm::vec3(chunk_size.x, chunk_size.y, chunk_size.z)*
-				glm::vec3(chunks[x][y].position)
-			);
-			glUniformMatrix4fv(
-				model_uni, 1, GL_FALSE, glm::value_ptr(transform)
-			);
-			glBindVertexArray(chunks[x][y].vtx_array);
-			glBindBuffer(GL_ARRAY_BUFFER, chunks[x][y].buffer_geometry);
-			glDrawArrays(GL_TRIANGLES, 0, chunks[x][y].vertex_count);
+		 	unsigned int y = visible_indices[i].y;
+		 	chunks[x][y].draw = true;
+		}
+
+		for(auto &gv : chunk_groupings) {
+			for(auto &g : gv) {
+				bool bound = false;
+				size_t sum = 0;
+				for(auto &c : g.chunks) {
+					if(c->draw) {
+						if(!bound) {
+							glBindBuffer(GL_ARRAY_BUFFER, g.merged_geometry);
+							glBindVertexArray(g.vtx_array);
+							bound = true;
+						}
+						glm::mat4 transform;
+						transform = glm::translate(
+							transform,
+							glm::vec3(chunk_size.x, chunk_size.y, chunk_size.z)*
+							glm::vec3(c->position)
+						);
+						glUniformMatrix4fv(
+							model_uni, 1, GL_FALSE, glm::value_ptr(transform)
+						);
+						glDrawArrays(GL_TRIANGLES, sum, c->vertex_count);
+					}
+					sum += c->vertex_count;
+				}
+			}
 		}
 
 		glDisable(GL_DEPTH_TEST);

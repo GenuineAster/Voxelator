@@ -13,8 +13,6 @@ uniform sampler2DArray spritesheet;
 
 void main()
 {
-	if(vPosition.z <= 0.0)
-		discard;
 	outNormal = vec4(vNormal, 1.0);
 	outColor = texture(spritesheet, vTexcoords);
 }
