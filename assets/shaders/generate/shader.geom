@@ -5,7 +5,7 @@ layout(invocations = 6) in;
 layout(points) in;
 layout(triangle_strip, max_vertices = 4) out;
 
-layout(std430, binding=0) buffer buff { bool facesused[]; };
+layout(std430, binding=0) coherent buffer buff { bool facesused[]; };
 
 out vec3 gTexcoords;
 out vec3 gNormal;
@@ -205,11 +205,13 @@ int getID(isampler3D chunk, ivec3 pos) {
 }
 
 bool face_used(ivec3 pos_index) {
+	memoryBarrierBuffer();
 	return facesused[int(gl_InvocationID * chunkSize.z * chunkSize.y * chunkSize.x + pos_index.z * chunkSize.y * chunkSize.x + pos_index.y * chunkSize.x + pos_index.x)];
 }
 
 void use_face(ivec3 pos_index) {
 	facesused[int(gl_InvocationID * chunkSize.z * chunkSize.y * chunkSize.x + pos_index.z * chunkSize.y * chunkSize.x + pos_index.y * chunkSize.x + pos_index.x)] = true;
+	memoryBarrierBuffer();
 }
 
 bool should_generate_face(ivec3 pos_index) {
@@ -246,24 +248,58 @@ void main() {
 
 	// use_face(pos_index);
 	// ivec3 offset = ivec3(0,0,0);
-	ivec3 offset = ivec3(0);
+	ivec3 xoffset = ivec3(0);
+	ivec3 yoffset = ivec3(0);
 	// ivec3 offset1 = pos_offsets0;
 	int increment = 1;
 
+	int m = 0;
+	int c = 0;
+	bool e = false;
+
 	// if(getID(pos_index + offset) == ID && should_generate_face(pos_index + offset)) {
-		do {
-			++increment;
-			use_face(pos_index+offset);
-			offset+=expansion0[n];
+		while (c <= m && !e && getID(pos_index + xoffset + yoffset) == ID && should_generate_face(pos_index + xoffset + yoffset)) {
+			c = 0;
+			ivec3 old_off = xoffset;
+			xoffset=ivec3(0);
+			do {
+				// ++increment;
+				++c;
+				// use_face(pos_index+xoffset+yoffset);
+				xoffset+=expansion0[n];
+			} while(getID(pos_index + xoffset + yoffset) == ID && should_generate_face(pos_index + xoffset + yoffset));
+
+			if(m==0) {
+				m=c;
+				if(m==0) e = true;
+			}
+			else if(c < m) {
+				xoffset = old_off;
+				e=true;
+			}
+
+			if(e) break;
+
+			ivec3 off = ivec3(0);
+			c = 0;
+			do {
+				++c;
+				use_face(pos_index+off+yoffset);
+				off+=expansion0[n];
+			} while(c < m);
+			xoffset = off;
+			yoffset+=expansion1[n];
 		}
-		while(getID(pos_index + offset) == ID && should_generate_face(pos_index + offset));
 	// }
 
 	// offset = ivec3(1,)
 
 	// offset-=expansion1[n];
 
-	offset = max(offset, ivec3(1,1,1));
+	// xoffset = max(xoffset, ivec3(1,1,1));
+	// yoffset = max(yoffset, ivec3(1,1,1));
+
+	ivec3 offset = max(xoffset+yoffset, ivec3(1,1,1));
 
 	if(generate_face0) {
 		// Draw first face
