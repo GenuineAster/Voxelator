@@ -986,7 +986,7 @@ int main()
 	glClearColor(0.517f, 0.733f, 0.996f, 1.f);
 
 	float intensity = 0.91;
-	float bias = -0.21;
+	float bias = 0.21;
 	float scale = 0.27;
 	float sample_radius = 0.20;
 

@@ -12,7 +12,7 @@ uniform sampler2D normalsTex;
 uniform sampler2D colorTex;
 uniform sampler2D depthTex;
 uniform float intensity = 0.91;
-uniform float bias = -0.21;
+uniform float bias = 0.21;
 uniform float scale = 0.27;
 uniform float sample_radius = 0.20;
 uniform mat4  view;
