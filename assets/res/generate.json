@@ -1,0 +1,47 @@
+{
+	"generate" : {
+		"resources" : [
+			{
+				"name" : "vertex_shader",
+				"type" : "shader",
+				"dependencies" : [],
+				"data" : {
+					"file" : ".shaders.vertex",
+					"type" : "vertex"
+				}
+			},
+			{
+				"name" : "geometry_shader",
+				"type" : "shader",
+				"dependencies" : [],
+				"data" : {
+					"file" : ".shaders.geometry",
+					"type" : "geometry"
+				}
+			},
+			{
+				"name" : "generate_program",
+				"type" : "shader_program",
+				"dependencies" : [
+					".resources.vertex_shader",
+					".resources.geometry_shader",
+				],
+				"data" : {
+					"attach" : [
+						".resources.vertex_shader",
+						".resources.geometry_shader",
+					],
+					"transform_feedback_varyings": [
+						{"position"  : "gPos"      },
+						{"texcoords" : "gTexcoords"},
+						{"normal"    : "gNormal"   }
+					]
+				}
+			}
+		],
+		"files" : [
+			{"name" : ".shaders.vertex", "path" : "assets/shaders/generate/shader.vert"},
+			{"name" : ".shaders.geometry", "path" : "assets/shaders/generate/shader.geom"},
+		]
+	}
+}
