@@ -1,0 +1,85 @@
+{
+	"render" : {
+		"resources" : [
+			{
+				"name" : "frustum_culling.vertex_shader",
+				"type" : "shader",
+				"dependencies" : [],
+				"data" : {
+					"file" : ".shaders.frustum_culling.vertex",
+					"type" : "vertex"
+				}
+			},
+			{
+				"name" : "frustum_culling.geometry_shader",
+				"type" : "shader",
+				"dependencies" : [],
+				"data" : {
+					"file" : ".shaders.frustum_culling.geometry",
+					"type" : "geometry"
+				}
+			},
+			{
+				"name" : "frustum_culling.program",
+				"type" : "shader_program",
+				"dependencies" : [
+					".resources.frustum_culling.vertex_shader",
+					".resources.frustum_culling.geometry_shader",
+				],
+				"data" : {
+					"attach" : [
+						".resources.frustum_culling.vertex_shader",
+						".resources.frustum_culling.geometry_shader",
+					],
+					"transform_feedback_varyings": [
+						{"position" : "gPos"}
+					]
+				}
+			},
+
+			{
+				"name" : "render.vertex_shader",
+				"type" : "shader",
+				"dependencies" : [],
+				"data" : {
+					"file" : ".shaders.render.vertex",
+					"type" : "vertex"
+				}
+			},
+			{
+				"name" : "render.fragment_shader",
+				"type" : "shader",
+				"dependencies" : [],
+				"data" : {
+					"file" : ".shaders.render.fragment",
+					"type" : "fragment"
+				}
+			},
+			{
+				"name" : "render.program",
+				"type" : "shader_program",
+				"dependencies" : [
+					".resources.render.vertex_shader",
+					".resources.render.fragment_shader",
+				],
+				"data" : {
+					"attach" : [
+						".resources.render.vertex_shader",
+						".resources.render.fragment_shader",
+					],
+					"frag_data_locations": [
+						{"outColor" : 0},
+						{"outNormal" : 1}
+					]
+				}
+			},
+		],
+		"files" : [
+			{"name" : ".shaders.frustum_culling.vertex", "path" : "assets/shaders/frustum_culling/shader.vert"},
+			{"name" : ".shaders.frustum_culling.geometry", "path" : "assets/shaders/frustum_culling/shader.geom"},
+
+			{"name" : ".shaders.render.vertex", "path" : "assets/shaders/render/shader.vert"},
+			{"name" : ".shaders.render.fragment", "path" : "assets/shaders/render/shader.frag"},
+		]
+	}
+}
