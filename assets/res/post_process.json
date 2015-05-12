@@ -1,0 +1,84 @@
+{
+	"post_process" : {
+		"resources" : [
+			{
+				"name" : "lighting.vertex_shader",
+				"type" : "shader",
+				"dependencies" : [],
+				"data" : {
+					"file" : ".shaders.lighting.vertex",
+					"type" : "vertex"
+				}
+			},
+			{
+				"name" : "lighting.fragment_shader",
+				"type" : "shader",
+				"dependencies" : [],
+				"data" : {
+					"file" : ".shaders.lighting.fragment",
+					"type" : "fragment"
+				}
+			},
+			{
+				"name" : "lighting.program",
+				"type" : "shader_program",
+				"dependencies" : [
+					".resources.lighting.vertex_shader",
+					".resources.lighting.fragment_shader",
+				],
+				"data" : {
+					"attach" : [
+						".resources.lighting.vertex_shader",
+						".resources.lighting.fragment_shader",
+					],
+					"frag_data_locations": [
+						{"outCol" : 0}
+					]
+				}
+			},
+
+			{
+				"name" : "display.vertex_shader",
+				"type" : "shader",
+				"dependencies" : [],
+				"data" : {
+					"file" : ".shaders.display.vertex",
+					"type" : "vertex"
+				}
+			},
+			{
+				"name" : "display.fragment_shader",
+				"type" : "shader",
+				"dependencies" : [],
+				"data" : {
+					"file" : ".shaders.display.fragment",
+					"type" : "fragment"
+				}
+			},
+			{
+				"name" : "display.program",
+				"type" : "shader_program",
+				"dependencies" : [
+					".resources.display.vertex_shader",
+					".resources.display.fragment_shader",
+				],
+				"data" : {
+					"attach" : [
+						".resources.display.vertex_shader",
+						".resources.display.fragment_shader",
+					],
+					"frag_data_locations": [
+						{"color" : 0}
+					]
+				}
+			}
+		],
+		"files" : [
+			{"name" : ".shaders.lighting.vertex", "path" : "assets/shaders/lighting/shader.vert"},
+			{"name" : ".shaders.lighting.fragment", "path" : "assets/shaders/lighting/shader.frag"},
+
+			{"name" : ".shaders.display.vertex", "path" : "assets/shaders/display/shader.vert"},
+			{"name" : ".shaders.display.fragment", "path" : "assets/shaders/display/shader.frag"},
+		]
+	}
+}
