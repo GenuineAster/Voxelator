@@ -2,34 +2,34 @@
 	"generate" : {
 		"resources" : [
 			{
-				"name" : "vertex_shader",
+				"name" : "generate.vertex_shader",
 				"type" : "shader",
 				"dependencies" : [],
 				"data" : {
-					"file" : ".shaders.vertex",
+					"file" : ".shaders.generate.vertex",
 					"type" : "vertex"
 				}
 			},
 			{
-				"name" : "geometry_shader",
+				"name" : "generate.geometry_shader",
 				"type" : "shader",
 				"dependencies" : [],
 				"data" : {
-					"file" : ".shaders.geometry",
+					"file" : ".shaders.generate.geometry",
 					"type" : "geometry"
 				}
 			},
 			{
-				"name" : "generate_program",
+				"name" : "generate.program",
 				"type" : "shader_program",
 				"dependencies" : [
-					".resources.vertex_shader",
-					".resources.geometry_shader",
+					".resources.generate.vertex_shader",
+					".resources.generate.geometry_shader",
 				],
 				"data" : {
 					"attach" : [
-						".resources.vertex_shader",
-						".resources.geometry_shader",
+						".resources.generate.vertex_shader",
+						".resources.generate.geometry_shader",
 					],
 					"transform_feedback_varyings": [
 						{"position"  : "gPos"      },
@@ -40,8 +40,8 @@
 			}
 		],
 		"files" : [
-			{"name" : ".shaders.vertex", "path" : "assets/shaders/generate/shader.vert"},
-			{"name" : ".shaders.geometry", "path" : "assets/shaders/generate/shader.geom"},
+			{"name" : ".shaders.generate.vertex", "path" : "assets/shaders/generate/shader.vert"},
+			{"name" : ".shaders.generate.geometry", "path" : "assets/shaders/generate/shader.geom"},
 		]
 	}
 }
