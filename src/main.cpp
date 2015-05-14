@@ -24,6 +24,9 @@
 #include <random>
 #include "ext/stb/stb_image.h"
 #include "ext/stb/stb_image_write.h"
+#include "ext/json/src/json.hpp"
+
+using json = nlohmann::json;
 
 using block_id = uint8_t;
 using coord_type = uint8_t;
