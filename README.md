@@ -7,10 +7,10 @@ This is mostly research code, so it's not typically clean. It was written and te
 
 ## Screenshots
 
-![]( http://f.cxx.ninja/img/Voxelator_13_1080.png )
+![]( /screenshots/voxelator_1.png )
 
-![]( http://f.cxx.ninja/img/Voxelator_26_1080.png )
+![]( /screenshots/voxelator_2.png )
 
-![]( http://f.cxx.ninja/img/Voxelator_28_1080.png )
+![]( /screenshots/voxelator_3.png )
 
-![]( http://f.cxx.ninja/img/Voxelator_30_1080.png )
+![]( /screenshots/voxelator_4.png )
